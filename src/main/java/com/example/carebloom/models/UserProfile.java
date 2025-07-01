@@ -8,4 +8,5 @@ public class UserProfile {
     private String name;
     private String email;
     private String role;
+    private String registrationStatus; // 'initial', 'location_pending', 'personal_pending', 'complete'
 }
