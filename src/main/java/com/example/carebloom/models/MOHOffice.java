@@ -5,22 +5,16 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.Data;
 
 @Data
-@Document(collection = "mothers")
-public class Mother {
+@Document(collection = "moh_offices")
+public class MOHOffice {
     @Id
     private String id;
     private String firebaseUid;
-    private String registrationStatus;
-    
-    // Personal details (Second Step)
-    private String name;
     private String email;
-    private String phone;
-    private String dueDate;
-    private String address;
-    
-    // Location details (Final Step)
+    private String officeName;
     private String district;
     private String division;
-    private String recordNumber;
+    private String registrationNumber;
+    private String contactNumber;
+    private String role = "moh-office";
 }
