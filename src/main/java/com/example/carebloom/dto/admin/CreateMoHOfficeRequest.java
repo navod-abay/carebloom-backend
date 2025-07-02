@@ -1,21 +1,15 @@
-package com.example.carebloom.models;
+package com.example.carebloom.dto.admin;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.Data;
 
 @Data
-@Document(collection = "moh_offices")
-public class MOHOffice {
-    @Id
-    private String id;
+public class CreateMoHOfficeRequest {
     private String divisionalSecretariat;
     private String address;
     private Location location;
     private String officerInCharge;
     private String contactNumber;
     private String adminEmail;
-    private String role = "MOH_OFFICE";
 
     @Data
     public static class Location {
