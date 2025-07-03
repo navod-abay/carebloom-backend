@@ -60,4 +60,13 @@ public class MoHOfficeUserController {
         mohOfficeUserService.deleteUser(officeId, userId);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{officeId}/users/{userId}/approve")
+    public ResponseEntity<MoHOfficeUser> approveUser(
+            @PathVariable String officeId,
+            @PathVariable String userId) {
+        
+        MoHOfficeUser approvedUser = mohOfficeUserService.approveUser(officeId, userId);
+        return ResponseEntity.ok(approvedUser);
+    }
 }
