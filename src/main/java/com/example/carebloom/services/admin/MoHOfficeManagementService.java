@@ -5,6 +5,7 @@ import com.example.carebloom.models.MOHOffice;
 import com.example.carebloom.models.MoHOfficeUser;
 import com.example.carebloom.repositories.MOHOfficeRepository;
 import com.example.carebloom.repositories.MoHOfficeUserRepository;
+import com.google.firebase.auth.UserRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,9 @@ public class MoHOfficeManagementService {
     
     @Autowired
     private MoHOfficeUserRepository mohOfficeUserRepository;
+    
+    @Autowired
+    private FirebaseUserService firebaseUserService;
 
     @Transactional
     public MOHOffice createMoHOffice(CreateMoHOfficeRequest request) {
@@ -55,19 +59,35 @@ public class MoHOfficeManagementService {
     }
     
     private void createAdminAccount(MOHOffice office, String adminEmail) {
-        MoHOfficeUser adminUser = new MoHOfficeUser();
-        adminUser.setOfficeId(office.getId());
-        adminUser.setEmail(adminEmail);
-        adminUser.setName(office.getOfficerInCharge()); // Use officer in charge name as default
-        adminUser.setAccountType("admin");
-        adminUser.setState("pending"); // Admin will need to be approved like other users
-        adminUser.setCreatedBy("system"); // Created by system during office creation
-        adminUser.setCreatedAt(LocalDateTime.now());
-        adminUser.setUpdatedAt(LocalDateTime.now());
-        
-        mohOfficeUserRepository.save(adminUser);
-        logger.info("Created admin account for office: {} with email: {}", 
-            office.getDivisionalSecretariat(), adminEmail);
+        try {
+            // Create Firebase user account first
+            UserRecord firebaseUser = firebaseUserService.createFirebaseUser(adminEmail);
+
+            logger.info("Firebase user created for MoH Office: {} with email: {}, with UID: {}", 
+                office.getDivisionalSecretariat(), adminEmail, firebaseUser.getUid());
+            
+            // Create MoH Office User with Firebase UID
+            MoHOfficeUser adminUser = new MoHOfficeUser();
+            adminUser.setOfficeId(office.getId());
+            adminUser.setEmail(adminEmail);
+            adminUser.setName(office.getOfficerInCharge()); // Use officer in charge name as default
+            adminUser.setAccountType("admin");
+            adminUser.setFirebaseUid(firebaseUser.getUid()); // Store Firebase UID
+            adminUser.setState("active"); // Admin account is active immediately
+            adminUser.setCreatedBy("system"); // Created by system during office creation
+            adminUser.setCreatedAt(LocalDateTime.now());
+            adminUser.setUpdatedAt(LocalDateTime.now());
+            
+            mohOfficeUserRepository.save(adminUser);
+            logger.info("Created admin account for office: {} with email: {} and Firebase UID: {}", 
+                office.getDivisionalSecretariat(), adminEmail, firebaseUser.getUid());
+                
+        } catch (Exception e) {
+            logger.error("Failed to create admin account for office {}: {}", 
+                office.getDivisionalSecretariat(), e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+                "Failed to create admin account: " + e.getMessage());
+        }
     }
 
     public List<MOHOffice> getAllMoHOffices() {
