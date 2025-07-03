@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/admin/auth")
+@CrossOrigin(origins = "${app.cors.admin-origin}")
 public class PlatformAdminAuthController {
 
     @Autowired

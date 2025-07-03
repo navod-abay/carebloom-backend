@@ -27,6 +27,9 @@ public class MoHOfficeUser {
     @Field("role")
     private String role = "MOH_OFFICE_USER";
     
+    @Field("account_type")
+    private String accountType = "normal"; // admin, normal
+    
     @Field("state")
     private String state = "pending"; // pending, active, revoked
     
