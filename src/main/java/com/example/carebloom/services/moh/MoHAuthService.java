@@ -56,4 +56,28 @@ public class MoHAuthService {
         // You can add additional sign-in logic here if needed
         return verifyIdToken(idToken);
     }
+
+    public boolean isUserAdmin(String firebaseUid) throws Exception {
+        MoHOfficeUser mohUser = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
+        if (mohUser == null) {
+            throw new RuntimeException("User not found");
+        }
+        return "admin".equals(mohUser.getAccountType());
+    }
+
+    public boolean isUserActive(String firebaseUid) throws Exception {
+        MoHOfficeUser mohUser = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
+        if (mohUser == null) {
+            throw new RuntimeException("User not found");
+        }
+        return "active".equals(mohUser.getState());
+    }
+
+    public MoHOfficeUser getUserByFirebaseUid(String firebaseUid) throws Exception {
+        MoHOfficeUser mohUser = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
+        if (mohUser == null) {
+            throw new RuntimeException("User not found");
+        }
+        return mohUser;
+    }
 }
