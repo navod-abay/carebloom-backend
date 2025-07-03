@@ -57,6 +57,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
                 
                 // Determine user role based on which repository contains the user
                 String role = determineUserRole(firebaseUid);
+                logger.info("Authenticated user: {}, Role: {}", firebaseUid, role);
                 
                 if (role != null) {
                     // Create authentication with proper role
