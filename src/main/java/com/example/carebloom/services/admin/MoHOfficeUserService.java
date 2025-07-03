@@ -48,10 +48,12 @@ public class MoHOfficeUserService {
         MoHOfficeUser user = new MoHOfficeUser();
         user.setOfficeId(request.getOfficeId());
         user.setEmail(request.getEmail());
-        user.setState("pending"); // User needs to complete registration
+        user.setState("pending"); // User needs to be approved before activation
         user.setCreatedBy(createdBy);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
+        
+        logger.info("Successfully created user {} in pending state", request.getEmail());
         
         return mohOfficeUserRepository.save(user);
     }
@@ -115,7 +117,8 @@ public class MoHOfficeUserService {
             user.setState("active");
             user.setUpdatedAt(LocalDateTime.now());
             
-            logger.info("Successfully approved user {} and created Firebase account", user.getEmail());
+            logger.info("Successfully approved user {} and created Firebase account with UID: {}", 
+                user.getEmail(), firebaseUser.getUid());
             
             return mohOfficeUserRepository.save(user);
             
