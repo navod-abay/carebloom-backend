@@ -244,6 +244,7 @@ public class MidwifeService {
         
         if (request.getYearsOfExperience() != null && request.getYearsOfExperience() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Years of experience cannot be negative");
+            
         }
     }
 }

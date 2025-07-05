@@ -89,4 +89,5 @@ public class DataInitializer implements CommandLineRunner {
         
         System.out.println("Created 2 sample midwives");
     }
+    
 }

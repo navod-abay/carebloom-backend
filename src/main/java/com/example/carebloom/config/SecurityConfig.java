@@ -35,7 +35,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/midwife/auth/**").permitAll()
                 .requestMatchers("/api/v1/vendor/auth/**").permitAll()
                 .requestMatchers("/api/v1/moh/auth/**").permitAll()
-               // .requestMatchers("/api/v1/test/**").permitAll() // Allow unauthenticated access for testing
+                .requestMatchers("/api/v1/test/**").permitAll() // Allow unauthenticated access for testing
                 .requestMatchers("/api/v1/mother/**").hasRole("MOTHER")
                 .requestMatchers("/api/v1/admin/**").hasRole("PLATFORM_MANAGER")
                 .requestMatchers("/api/v1/midwife/**").hasRole("MIDWIFE")
