@@ -17,14 +17,15 @@ public class SecurityConfig {
 
     @Autowired
     private CorsConfigurationSource corsConfigurationSource;
-    
+
     @Autowired
     private RoleAuthenticationFilter roleAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource))
+
+           .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterBefore(roleAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -43,7 +44,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/moh/**").hasRole("MOH_OFFICE")
                 .anyRequest().authenticated()
             );
-        
+    
         return http.build();
     }
 }
