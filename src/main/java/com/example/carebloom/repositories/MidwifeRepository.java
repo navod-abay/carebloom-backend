@@ -30,4 +30,5 @@ public interface MidwifeRepository extends MongoRepository<Midwife, String> {
     
     @Query("{'specialization': ?0}")
     List<Midwife> findBySpecialization(String specialization);
+    
 }

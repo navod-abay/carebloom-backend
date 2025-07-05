@@ -20,4 +20,6 @@ public class MidwifeRequest {
 
     private String registrationNumber;
     private String state; 
+    
 }
+
