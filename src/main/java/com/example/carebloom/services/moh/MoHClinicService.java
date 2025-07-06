@@ -27,8 +27,9 @@ public class MoHClinicService {
         return clinicRepository.findById(id);
     }
 
-    public CreateClinicResponse createClinic(Clinic clinic) {
+    public CreateClinicResponse createClinic(Clinic clinic, String userId) {
         try {
+            clinic.setUserId(userId);
             clinic.setCreatedAt(LocalDateTime.now());
             clinic.setUpdatedAt(LocalDateTime.now());
             clinic.setActive(true);
@@ -64,5 +65,9 @@ public class MoHClinicService {
             return true;
         }
         return false;
+    }
+
+    public List<Clinic> getClinicsByUserId(String userId) {
+        return clinicRepository.findByUserIdAndIsActiveTrue(userId);
     }
 }
