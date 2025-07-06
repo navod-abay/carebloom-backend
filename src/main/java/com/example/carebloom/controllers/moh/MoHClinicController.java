@@ -25,9 +25,9 @@ public class MoHClinicController {
         return ResponseEntity.ok(clinics);
     }
 
-    @GetMapping("/clinics/category/{category}")
-    public ResponseEntity<List<Clinic>> getClinicsByCategory(@PathVariable String category) {
-        List<Clinic> clinics = clinicService.getClinicsByCategory(category);
+    @GetMapping("/clinics/date/{date}")
+    public ResponseEntity<List<Clinic>> getClinicsByDate(@PathVariable String date) {
+        List<Clinic> clinics = clinicService.getClinicsByDate(date);
         return ResponseEntity.ok(clinics);
     }
 

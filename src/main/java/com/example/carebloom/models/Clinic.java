@@ -11,13 +11,10 @@ public class Clinic {
     @Id
     private String id;
     private String title;
-    private String date;
-    private String category;
-    private String description;
-    private String location;
+    private String date; // YYYY-MM-DD format
     private String startTime;
-    private String endTime;
-    private Integer capacity;
+    private String doctorName;
+    private String location;
     private boolean isActive = true;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

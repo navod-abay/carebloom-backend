@@ -19,8 +19,8 @@ public class MoHClinicService {
         return clinicRepository.findByIsActiveTrue();
     }
 
-    public List<Clinic> getClinicsByCategory(String category) {
-        return clinicRepository.findByCategoryAndIsActiveTrue(category);
+    public List<Clinic> getClinicsByDate(String date) {
+        return clinicRepository.findByDateAndIsActiveTrue(date);
     }
 
     public Optional<Clinic> getClinicById(String id) {
@@ -45,12 +45,9 @@ public class MoHClinicService {
             Clinic updatedClinic = existingClinic.get();
             updatedClinic.setTitle(clinic.getTitle());
             updatedClinic.setDate(clinic.getDate());
-            updatedClinic.setCategory(clinic.getCategory());
-            updatedClinic.setDescription(clinic.getDescription());
-            updatedClinic.setLocation(clinic.getLocation());
             updatedClinic.setStartTime(clinic.getStartTime());
-            updatedClinic.setEndTime(clinic.getEndTime());
-            updatedClinic.setCapacity(clinic.getCapacity());
+            updatedClinic.setDoctorName(clinic.getDoctorName());
+            updatedClinic.setLocation(clinic.getLocation());
             updatedClinic.setUpdatedAt(LocalDateTime.now());
             return clinicRepository.save(updatedClinic);
         }

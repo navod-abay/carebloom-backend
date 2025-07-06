@@ -7,9 +7,6 @@ import java.util.List;
 
 @Repository
 public interface ClinicRepository extends MongoRepository<Clinic, String> {
-    List<Clinic> findByCategoryAndIsActiveTrue(String category);
-
     List<Clinic> findByIsActiveTrue();
-
     List<Clinic> findByDateAndIsActiveTrue(String date);
 }
