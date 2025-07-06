@@ -15,20 +15,21 @@ public class MoHClinicService {
     @Autowired
     private ClinicRepository clinicRepository;
 
-    public List<Clinic> getAllClinics() {
-        return clinicRepository.findByIsActiveTrue();
+    public List<Clinic> getAllClinicsByUserId(String userId) {
+        return clinicRepository.findByUserIdAndIsActiveTrue(userId);
     }
 
-    public List<Clinic> getClinicsByCategory(String category) {
-        return clinicRepository.findByCategoryAndIsActiveTrue(category);
+    public List<Clinic> getClinicsByDate(String date) {
+        return clinicRepository.findByDateAndIsActiveTrue(date);
     }
 
     public Optional<Clinic> getClinicById(String id) {
         return clinicRepository.findById(id);
     }
 
-    public CreateClinicResponse createClinic(Clinic clinic) {
+    public CreateClinicResponse createClinic(Clinic clinic, String userId) {
         try {
+            clinic.setUserId(userId);
             clinic.setCreatedAt(LocalDateTime.now());
             clinic.setUpdatedAt(LocalDateTime.now());
             clinic.setActive(true);
@@ -45,12 +46,9 @@ public class MoHClinicService {
             Clinic updatedClinic = existingClinic.get();
             updatedClinic.setTitle(clinic.getTitle());
             updatedClinic.setDate(clinic.getDate());
-            updatedClinic.setCategory(clinic.getCategory());
-            updatedClinic.setDescription(clinic.getDescription());
-            updatedClinic.setLocation(clinic.getLocation());
             updatedClinic.setStartTime(clinic.getStartTime());
-            updatedClinic.setEndTime(clinic.getEndTime());
-            updatedClinic.setCapacity(clinic.getCapacity());
+            updatedClinic.setDoctorName(clinic.getDoctorName());
+            updatedClinic.setLocation(clinic.getLocation());
             updatedClinic.setUpdatedAt(LocalDateTime.now());
             return clinicRepository.save(updatedClinic);
         }
@@ -67,5 +65,9 @@ public class MoHClinicService {
             return true;
         }
         return false;
+    }
+
+    public List<Clinic> getClinicsByUserId(String userId) {
+        return clinicRepository.findByUserIdAndIsActiveTrue(userId);
     }
 }

@@ -10,14 +10,12 @@ import java.time.LocalDateTime;
 public class Clinic {
     @Id
     private String id;
+    private String userId; // ID of the user who created this clinic
     private String title;
-    private String date;
-    private String category;
-    private String description;
-    private String location;
+    private String date; // YYYY-MM-DD format
     private String startTime;
-    private String endTime;
-    private Integer capacity;
+    private String doctorName;
+    private String location;
     private boolean isActive = true;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
