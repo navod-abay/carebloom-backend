@@ -20,14 +20,22 @@ public class MoHClinicController {
 
     @Autowired
     private MoHClinicService clinicService;
-    
+
     @Autowired
     private MoHAuthService mohAuthService;
 
     @GetMapping("/clinics")
-    public ResponseEntity<List<Clinic>> getAllClinics() {
-        List<Clinic> clinics = clinicService.getAllClinics();
-        return ResponseEntity.ok(clinics);
+    public ResponseEntity<List<Clinic>> getAllClinicsByUserId(@RequestHeader("Authorization") String idToken) {
+        try {
+            // Extract user ID from Firebase authentication token
+            UserProfile userProfile = mohAuthService.verifyIdToken(idToken);
+            String userId = userProfile.getId();
+
+            List<Clinic> clinics = clinicService.getAllClinicsByUserId(userId);
+            return ResponseEntity.ok(clinics);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @GetMapping("/clinics/date/{date}")
@@ -51,7 +59,7 @@ public class MoHClinicController {
             // Extract user ID from Firebase authentication token
             UserProfile userProfile = mohAuthService.verifyIdToken(idToken);
             String userId = userProfile.getId();
-            
+
             CreateClinicResponse response = clinicService.createClinic(clinic, userId);
             if (response.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -59,7 +67,8 @@ public class MoHClinicController {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
             }
         } catch (Exception e) {
-            CreateClinicResponse errorResponse = new CreateClinicResponse(false, "Authentication failed: " + e.getMessage());
+            CreateClinicResponse errorResponse = new CreateClinicResponse(false,
+                    "Authentication failed: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
     }
@@ -88,7 +97,7 @@ public class MoHClinicController {
             // Extract user ID from Firebase authentication token
             UserProfile userProfile = mohAuthService.verifyIdToken(idToken);
             String userId = userProfile.getId();
-            
+
             List<Clinic> clinics = clinicService.getClinicsByUserId(userId);
             return ResponseEntity.ok(clinics);
         } catch (Exception e) {

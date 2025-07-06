@@ -15,8 +15,8 @@ public class MoHClinicService {
     @Autowired
     private ClinicRepository clinicRepository;
 
-    public List<Clinic> getAllClinics() {
-        return clinicRepository.findByIsActiveTrue();
+    public List<Clinic> getAllClinicsByUserId(String userId) {
+        return clinicRepository.findByUserIdAndIsActiveTrue(userId);
     }
 
     public List<Clinic> getClinicsByDate(String date) {
