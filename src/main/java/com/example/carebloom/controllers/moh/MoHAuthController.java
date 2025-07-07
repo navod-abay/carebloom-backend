@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/moh/auth")
@@ -40,7 +39,6 @@ public class MoHAuthController {
     @GetMapping("/role")
     public ResponseEntity<?> getUserRole(@RequestHeader("Authorization") String idToken) {
         try {
-            String token = idToken.replace("Bearer ", "");
             UserProfile profile = mohAuthService.verifyIdToken(idToken);
 
             // Get additional role information
