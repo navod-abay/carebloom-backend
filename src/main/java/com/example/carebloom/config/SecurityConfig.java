@@ -36,12 +36,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/midwife/auth/**").permitAll()
                 .requestMatchers("/api/v1/vendor/auth/**").permitAll()
                 .requestMatchers("/api/v1/moh/auth/**").permitAll()
-               // .requestMatchers("/api/v1/test/**").permitAll() // Allow unauthenticated access for testing
                 .requestMatchers("/api/v1/mother/**").hasRole("MOTHER")
                 .requestMatchers("/api/v1/admin/**").hasRole("PLATFORM_MANAGER")
                 .requestMatchers("/api/v1/midwife/**").hasRole("MIDWIFE")
                 .requestMatchers("/api/v1/vendor/**").hasRole("VENDOR")
-                .requestMatchers("/api/v1/moh/**").hasRole("MOH_OFFICE")
+                .requestMatchers("/api/v1/moh/**").hasAnyRole("MOH_OFFICE_USER", "MOH_OFFICE_ADMIN")
                 .anyRequest().authenticated()
             );
     
