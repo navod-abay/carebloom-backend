@@ -72,6 +72,7 @@ public class MoHOfficeManagementService {
             adminUser.setEmail(adminEmail);
             adminUser.setName(office.getOfficerInCharge()); // Use officer in charge name as default
             adminUser.setAccountType("admin");
+            adminUser.setRole("MOH_OFFICE_ADMIN"); // Set role as MOH_OFFICE_ADMIN
             adminUser.setFirebaseUid(firebaseUser.getUid()); // Store Firebase UID
             adminUser.setState("active"); // Admin account is active immediately
             adminUser.setCreatedBy("system"); // Created by system during office creation

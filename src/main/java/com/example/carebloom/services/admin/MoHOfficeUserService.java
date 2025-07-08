@@ -127,4 +127,50 @@ public class MoHOfficeUserService {
                 "Failed to approve user: " + e.getMessage());
         }
     }
+    
+    /**
+     * Create a new MOH Office user in pending state with normal account type
+     * Used by MOH Office Admins to create new staff users
+     *
+     * @param email Email of the new user
+     * @param createdBy Firebase UID of the admin creating this user
+     * @return The created MoHOfficeUser object
+     */
+    public MoHOfficeUser createMohUser(String email, String createdBy) {
+        if (email == null || email.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+        
+        // Find the office ID of the admin creating the user
+        MoHOfficeUser adminUser = mohOfficeUserRepository.findByFirebaseUid(createdBy);
+        if (adminUser == null || !"admin".equals(adminUser.getAccountType())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to create users");
+        }
+        
+        // Use the same office ID as the admin
+        String officeId = adminUser.getOfficeId();
+        
+        // Verify office exists
+        if (!mohOfficeRepository.existsById(officeId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MoH Office not found");
+        }
+        
+        // Check if user with this email already exists in this office
+        if (mohOfficeUserRepository.findByOfficeIdAndEmail(officeId, email) != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User with this email already exists in this office");
+        }
+        
+        MoHOfficeUser user = new MoHOfficeUser();
+        user.setOfficeId(officeId);
+        user.setEmail(email);
+        user.setState("pending"); // User needs to be approved before activation
+        user.setAccountType("normal"); // Default to normal user type
+        user.setCreatedBy(createdBy);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        
+        logger.info("Successfully created MOH Office user {} in pending state by admin {}", email, createdBy);
+        
+        return mohOfficeUserRepository.save(user);
+    }
 }

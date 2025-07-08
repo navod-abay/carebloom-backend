@@ -66,21 +66,21 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
                 
                 logger.debug("Processing authentication for path: {}, UID: {}", path, firebaseUid);
                 
-                // Path-based role determination - check only the relevant repository
+                // Path-based repository check - only query the relevant repository based on the path
                 if (path.startsWith("/api/v1/admin/")) {
-                    authenticateForRole(firebaseUid, "PLATFORM_MANAGER", platformAdminRepository);
+                    authenticateAdmin(firebaseUid);
                 } 
                 else if (path.startsWith("/api/v1/mother/")) {
-                    authenticateForRole(firebaseUid, "MOTHER", motherRepository);
+                    authenticateMother(firebaseUid);
                 } 
                 else if (path.startsWith("/api/v1/midwife/")) {
-                    authenticateForRole(firebaseUid, "MIDWIFE", midwifeRepository);
+                    authenticateMidwife(firebaseUid);
                 } 
                 else if (path.startsWith("/api/v1/vendor/")) {
-                    authenticateForRole(firebaseUid, "VENDOR", vendorRepository);
+                    authenticateVendor(firebaseUid);
                 } 
                 else if (path.startsWith("/api/v1/moh/")) {
-                    authenticateForRole(firebaseUid, "MOH_OFFICE_USER", moHOfficeUserRepository);
+                    authenticateMohUser(firebaseUid);
                 }
             } catch (Exception e) {
                 logger.error("Token verification failed for path: {}", path, e);
@@ -92,53 +92,90 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
     }
     
     /**
-     * Authenticate user for a specific role by checking only the relevant repository
+     * Authenticate a platform admin user
      */
-    private void authenticateForRole(String firebaseUid, String role, Object repository) {
-        boolean userExists = false;
-        
-        // Check the appropriate repository based on type
-        if (repository instanceof PlatformAdminRepository) {
-            PlatformAdmin admin = ((PlatformAdminRepository) repository).findByFirebaseUid(firebaseUid);
-            userExists = (admin != null);
-        } 
-        else if (repository instanceof MotherRepository) {
-            Mother mother = ((MotherRepository) repository).findByFirebaseUid(firebaseUid);
-            userExists = (mother != null);
-        } 
-        else if (repository instanceof MidwifeRepository) {
-            Midwife midwife = ((MidwifeRepository) repository).findByFirebaseUid(firebaseUid);
-            userExists = (midwife != null);
-        } 
-        else if (repository instanceof VendorRepository) {
-            Vendor vendor = ((VendorRepository) repository).findByFirebaseUid(firebaseUid);
-            userExists = (vendor != null);
-        } 
-        else if (repository instanceof MoHOfficeUserRepository) {
-            MoHOfficeUser moHUser = ((MoHOfficeUserRepository) repository).findByFirebaseUid(firebaseUid);
-            userExists = (moHUser != null && "active".equals(moHUser.getState()));
-        }
-        
-        // If user exists in the repository, authenticate with the appropriate role
-        if (userExists) {
-            logger.info("Authenticated user: {} as role: {}", firebaseUid, role);
-            
-            // Create authentication with proper role
-            List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_" + role)
-            );
-            
-            UsernamePasswordAuthenticationToken authentication = 
-                new UsernamePasswordAuthenticationToken(
-                    firebaseUid, 
-                    null, 
-                    authorities
-                );
-            
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+    private void authenticateAdmin(String firebaseUid) {
+        PlatformAdmin admin = platformAdminRepository.findByFirebaseUid(firebaseUid);
+        if (admin != null) {
+            setAuthentication(firebaseUid, "PLATFORM_MANAGER");
+            logger.info("Authenticated admin: {}", firebaseUid);
         } else {
-            logger.warn("User {} attempted to access {} resources but was not found", 
-                      firebaseUid, role);
+            logger.warn("User {} attempted to access admin resources but was not found", firebaseUid);
         }
+    }
+    
+    /**
+     * Authenticate a mother user
+     */
+    private void authenticateMother(String firebaseUid) {
+        Mother mother = motherRepository.findByFirebaseUid(firebaseUid);
+        if (mother != null) {
+            setAuthentication(firebaseUid, "MOTHER");
+            logger.info("Authenticated mother: {}", firebaseUid);
+        } else {
+            logger.warn("User {} attempted to access mother resources but was not found", firebaseUid);
+        }
+    }
+    
+    /**
+     * Authenticate a midwife user
+     */
+    private void authenticateMidwife(String firebaseUid) {
+        Midwife midwife = midwifeRepository.findByFirebaseUid(firebaseUid);
+        if (midwife != null) {
+            setAuthentication(firebaseUid, "MIDWIFE");
+            logger.info("Authenticated midwife: {}", firebaseUid);
+        } else {
+            logger.warn("User {} attempted to access midwife resources but was not found", firebaseUid);
+        }
+    }
+    
+    /**
+     * Authenticate a vendor user
+     */
+    private void authenticateVendor(String firebaseUid) {
+        Vendor vendor = vendorRepository.findByFirebaseUid(firebaseUid);
+        if (vendor != null) {
+            setAuthentication(firebaseUid, "VENDOR");
+            logger.info("Authenticated vendor: {}", firebaseUid);
+        } else {
+            logger.warn("User {} attempted to access vendor resources but was not found", firebaseUid);
+        }
+    }
+    
+    /**
+     * Authenticate a MOH Office user, determining their specific role based on the accountType
+     */
+    private void authenticateMohUser(String firebaseUid) {
+        MoHOfficeUser mohUser = moHOfficeUserRepository.findByFirebaseUid(firebaseUid);
+        
+        // Only authenticate active MoH users
+        if (mohUser != null && "active".equals(mohUser.getState())) {
+            // Determine specific role based on account type
+            String role = "admin".equals(mohUser.getAccountType()) ? "MOH_OFFICE_ADMIN" : "MOH_OFFICE_USER";
+            
+            setAuthentication(firebaseUid, role);
+            logger.info("Authenticated MOH user: {} as role: {}", firebaseUid, role);
+        } else {
+            logger.warn("User {} attempted to access MOH resources but was not found or not active", firebaseUid);
+        }
+    }
+    
+    /**
+     * Set authentication in the security context with the specified role
+     */
+    private void setAuthentication(String firebaseUid, String role) {
+        List<SimpleGrantedAuthority> authorities = Collections.singletonList(
+            new SimpleGrantedAuthority("ROLE_" + role)
+        );
+        
+        UsernamePasswordAuthenticationToken authentication = 
+            new UsernamePasswordAuthenticationToken(
+                firebaseUid, 
+                null, 
+                authorities
+            );
+        
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }
