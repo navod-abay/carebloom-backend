@@ -1,107 +1,145 @@
 package com.example.carebloom.controllers.moh;
 
 import com.example.carebloom.models.Clinic;
-import com.example.carebloom.models.UserProfile;
 import com.example.carebloom.services.moh.MoHClinicService;
-import com.example.carebloom.services.moh.MoHAuthService;
 import com.example.carebloom.dto.CreateClinicResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/moh")
-@CrossOrigin(origins = "{app.cors.moh-origin}")
+@CrossOrigin(origins = "${app.cors.moh-origin}")
 public class MoHClinicController {
+    private static final Logger logger = LoggerFactory.getLogger(MoHClinicController.class);
 
     @Autowired
     private MoHClinicService clinicService;
 
-    @Autowired
-    private MoHAuthService mohAuthService;
-
+    /**
+     * Get all clinics for the current user's MoH office.
+     * Uses Spring Security context to determine the user and MoH office.
+     */
     @GetMapping("/clinics")
-    public ResponseEntity<List<Clinic>> getAllClinicsByUserId(@RequestHeader("Authorization") String idToken) {
+    public ResponseEntity<?> getAllClinicsByMohOffice() {
         try {
-            // Extract user ID from Firebase authentication token
-            UserProfile userProfile = mohAuthService.verifyIdToken(idToken);
-            String userId = userProfile.getId();
-
-            List<Clinic> clinics = clinicService.getAllClinicsByUserId(userId);
+            List<Clinic> clinics = clinicService.getAllClinicsByMohOffice();
             return ResponseEntity.ok(clinics);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            logger.error("Error getting clinics", e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to retrieve clinics: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
+    /**
+     * Get clinics by date for the current user's MoH office
+     */
     @GetMapping("/clinics/date/{date}")
-    public ResponseEntity<List<Clinic>> getClinicsByDate(@PathVariable String date) {
-        List<Clinic> clinics = clinicService.getClinicsByDate(date);
-        return ResponseEntity.ok(clinics);
-    }
-
-    @GetMapping("/clinics/{id}")
-    public ResponseEntity<Clinic> getClinicById(@PathVariable String id) {
-        Optional<Clinic> clinic = clinicService.getClinicById(id);
-        return clinic.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PostMapping("/clinics")
-    public ResponseEntity<CreateClinicResponse> createClinic(
-            @RequestBody Clinic clinic,
-            @RequestHeader("Authorization") String idToken) {
+    public ResponseEntity<?> getClinicsByDate(@PathVariable String date) {
         try {
-            // Extract user ID from Firebase authentication token
-            UserProfile userProfile = mohAuthService.verifyIdToken(idToken);
-            String userId = userProfile.getId();
+            List<Clinic> clinics = clinicService.getClinicsByDate(date);
+            return ResponseEntity.ok(clinics);
+        } catch (Exception e) {
+            logger.error("Error getting clinics by date", e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to retrieve clinics by date: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
 
-            CreateClinicResponse response = clinicService.createClinic(clinic, userId);
+    /**
+     * Get a clinic by ID, ensuring it belongs to the current user's MoH office
+     */
+    @GetMapping("/clinics/{id}")
+    public ResponseEntity<?> getClinicById(@PathVariable String id) {
+        try {
+            Optional<Clinic> clinic = clinicService.getClinicById(id);
+            if (clinic.isPresent()) {
+                return ResponseEntity.ok(clinic.get());
+            } else {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Clinic not found or you don't have access to it");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            }
+        } catch (Exception e) {
+            logger.error("Error getting clinic by ID", e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to retrieve clinic: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Create a new clinic for the current user's MoH office
+     */
+    @PostMapping("/clinics")
+    public ResponseEntity<CreateClinicResponse> createClinic(@RequestBody Clinic clinic) {
+        try {
+            CreateClinicResponse response = clinicService.createClinic(clinic);
             if (response.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.CREATED).body(response);
             } else {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
         } catch (Exception e) {
+            logger.error("Error creating clinic", e);
             CreateClinicResponse errorResponse = new CreateClinicResponse(false,
-                    "Authentication failed: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+                    "Failed to create clinic: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
+    /**
+     * Update a clinic, ensuring it belongs to the current user's MoH office
+     */
     @PutMapping("/clinics/{id}")
-    public ResponseEntity<Clinic> updateClinic(@PathVariable String id, @RequestBody Clinic clinic) {
-        Clinic updatedClinic = clinicService.updateClinic(id, clinic);
-        if (updatedClinic != null) {
-            return ResponseEntity.ok(updatedClinic);
-        }
-        return ResponseEntity.notFound().build();
-    }
-
-    @DeleteMapping("/clinics/{id}")
-    public ResponseEntity<Void> deleteClinic(@PathVariable String id) {
-        boolean deleted = clinicService.deleteClinic(id);
-        if (deleted) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
-    }
-
-    @GetMapping("/my-clinics")
-    public ResponseEntity<List<Clinic>> getMyClinics(@RequestHeader("Authorization") String idToken) {
+    public ResponseEntity<?> updateClinic(@PathVariable String id, @RequestBody Clinic clinic) {
         try {
-            // Extract user ID from Firebase authentication token
-            UserProfile userProfile = mohAuthService.verifyIdToken(idToken);
-            String userId = userProfile.getId();
-
-            List<Clinic> clinics = clinicService.getClinicsByUserId(userId);
-            return ResponseEntity.ok(clinics);
+            Clinic updatedClinic = clinicService.updateClinic(id, clinic);
+            if (updatedClinic != null) {
+                return ResponseEntity.ok(updatedClinic);
+            } else {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Clinic not found or you don't have access to update it");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            logger.error("Error updating clinic", e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to update clinic: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Delete a clinic, ensuring it belongs to the current user's MoH office
+     */
+    @DeleteMapping("/clinics/{id}")
+    public ResponseEntity<?> deleteClinic(@PathVariable String id) {
+        try {
+            boolean deleted = clinicService.deleteClinic(id);
+            if (deleted) {
+                return ResponseEntity.noContent().build();
+            } else {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Clinic not found or you don't have access to delete it");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            }
+        } catch (Exception e) {
+            logger.error("Error deleting clinic", e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to delete clinic: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 }

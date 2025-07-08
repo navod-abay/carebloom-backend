@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 public class Clinic {
     @Id
     private String id;
-    private String userId; // ID of the user who created this clinic
+    private String mohOfficeId; // ID of the MoH office this clinic belongs to
     private String title;
     private String date; // YYYY-MM-DD format
     private String startTime;
