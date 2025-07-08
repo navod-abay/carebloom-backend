@@ -15,4 +15,7 @@ public interface MoHOfficeUserRepository extends MongoRepository<MoHOfficeUser, 
     
     @Query("{'office_id': ?0, '_id': ?1}")
     MoHOfficeUser findByOfficeIdAndId(String officeId, String userId);
+    
+    @Query("{'office_id': ?0, 'email': ?1}")
+    MoHOfficeUser findByOfficeIdAndEmail(String officeId, String email);
 }

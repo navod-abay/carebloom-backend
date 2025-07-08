@@ -1,7 +1,9 @@
 package com.example.carebloom.controllers.moh;
 
 import com.example.carebloom.models.Clinic;
+import com.example.carebloom.models.UserProfile;
 import com.example.carebloom.services.moh.MoHClinicService;
+import com.example.carebloom.services.moh.MoHAuthService;
 import com.example.carebloom.dto.CreateClinicResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,15 +21,26 @@ public class MoHClinicController {
     @Autowired
     private MoHClinicService clinicService;
 
+    @Autowired
+    private MoHAuthService mohAuthService;
+
     @GetMapping("/clinics")
-    public ResponseEntity<List<Clinic>> getAllClinics() {
-        List<Clinic> clinics = clinicService.getAllClinics();
-        return ResponseEntity.ok(clinics);
+    public ResponseEntity<List<Clinic>> getAllClinicsByUserId(@RequestHeader("Authorization") String idToken) {
+        try {
+            // Extract user ID from Firebase authentication token
+            UserProfile userProfile = mohAuthService.verifyIdToken(idToken);
+            String userId = userProfile.getId();
+
+            List<Clinic> clinics = clinicService.getAllClinicsByUserId(userId);
+            return ResponseEntity.ok(clinics);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
-    @GetMapping("/clinics/category/{category}")
-    public ResponseEntity<List<Clinic>> getClinicsByCategory(@PathVariable String category) {
-        List<Clinic> clinics = clinicService.getClinicsByCategory(category);
+    @GetMapping("/clinics/date/{date}")
+    public ResponseEntity<List<Clinic>> getClinicsByDate(@PathVariable String date) {
+        List<Clinic> clinics = clinicService.getClinicsByDate(date);
         return ResponseEntity.ok(clinics);
     }
 
@@ -39,12 +52,24 @@ public class MoHClinicController {
     }
 
     @PostMapping("/clinics")
-    public ResponseEntity<CreateClinicResponse> createClinic(@RequestBody Clinic clinic) {
-        CreateClinicResponse response = clinicService.createClinic(clinic);
-        if (response.isSuccess()) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    public ResponseEntity<CreateClinicResponse> createClinic(
+            @RequestBody Clinic clinic,
+            @RequestHeader("Authorization") String idToken) {
+        try {
+            // Extract user ID from Firebase authentication token
+            UserProfile userProfile = mohAuthService.verifyIdToken(idToken);
+            String userId = userProfile.getId();
+
+            CreateClinicResponse response = clinicService.createClinic(clinic, userId);
+            if (response.isSuccess()) {
+                return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            }
+        } catch (Exception e) {
+            CreateClinicResponse errorResponse = new CreateClinicResponse(false,
+                    "Authentication failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
     }
 
@@ -64,5 +89,19 @@ public class MoHClinicController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/my-clinics")
+    public ResponseEntity<List<Clinic>> getMyClinics(@RequestHeader("Authorization") String idToken) {
+        try {
+            // Extract user ID from Firebase authentication token
+            UserProfile userProfile = mohAuthService.verifyIdToken(idToken);
+            String userId = userProfile.getId();
+
+            List<Clinic> clinics = clinicService.getClinicsByUserId(userId);
+            return ResponseEntity.ok(clinics);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 }
