@@ -9,5 +9,6 @@ import java.util.List;
 public interface ClinicRepository extends MongoRepository<Clinic, String> {
     List<Clinic> findByIsActiveTrue();
     List<Clinic> findByDateAndIsActiveTrue(String date);
-    List<Clinic> findByUserIdAndIsActiveTrue(String userId);
+    List<Clinic> findByMohOfficeIdAndIsActiveTrue(String mohOfficeId);
+    List<Clinic> findByMohOfficeIdAndDateAndIsActiveTrue(String mohOfficeId, String date);
 }
