@@ -10,6 +10,7 @@ public class MOHOffice {
     @Id
     private String id;
     private String divisionalSecretariat;
+    private String district;  // Added district field
     private String address;
     private Location location;
     private String officerInCharge;
