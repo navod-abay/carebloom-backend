@@ -144,14 +144,14 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
     }
     
     /**
-     * Authenticate a MOH Office user, determining their specific role based on the accountType
+     * Authenticate a MOH Office user, determining their specific role based on the role field first, then accountType
      */
     private void authenticateMohUser(String firebaseUid) {
         MoHOfficeUser mohUser = moHOfficeUserRepository.findByFirebaseUid(firebaseUid);
         
         // Only authenticate active MoH users
         if (mohUser != null && "active".equals(mohUser.getState())) {
-            // Determine specific role based on account type
+
             String role = "admin".equals(mohUser.getAccountType()) ? "MOH_OFFICE_ADMIN" : "MOH_OFFICE_USER";
             
             setAuthentication(firebaseUid, role);

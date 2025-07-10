@@ -1,13 +1,13 @@
 package com.example.carebloom.config;
 
+import java.util.Arrays;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
 
 @Configuration
 public class CorsConfig {
@@ -34,12 +34,21 @@ public class CorsConfig {
         // MOH Office endpoints
         registerCorsConfig(source, "/api/v1/moh/**", corsProperties.getMohOrigin());
         
+        // Hints endpoints - allow both admin and frontend origins
+        registerCorsConfig(source, "/api/v1/hints", corsProperties.getAdminOrigin(), "http://localhost:5173");
+        registerCorsConfig(source, "/api/v1/hints/**", corsProperties.getAdminOrigin(), "http://localhost:5173");
+        
+        // Articles endpoints - allow both admin and frontend origins
+        registerCorsConfig(source, "/api/v1/aricles", corsProperties.getAdminOrigin(), "http://localhost:5173");
+        registerCorsConfig(source, "/api/v1/articles/**", corsProperties.getAdminOrigin(), "http://localhost:5173");
+
         return source;
     }
     
-    private void registerCorsConfig(UrlBasedCorsConfigurationSource source, String path, String origin) {
+    // Overloaded method to allow multiple origins
+    private void registerCorsConfig(UrlBasedCorsConfigurationSource source, String path, String... origins) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList(origin));
+        config.setAllowedOrigins(Arrays.asList(origins));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
         config.setAllowCredentials(true);
