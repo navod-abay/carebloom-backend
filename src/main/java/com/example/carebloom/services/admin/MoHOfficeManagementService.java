@@ -35,6 +35,7 @@ public class MoHOfficeManagementService {
         // Create the MoH Office
         MOHOffice office = new MOHOffice();
         office.setDivisionalSecretariat(request.getDivisionalSecretariat());
+        office.setDistrict(request.getDistrict()); // Add district field
         office.setAddress(request.getAddress());
         
         MOHOffice.Location location = new MOHOffice.Location();
@@ -52,8 +53,8 @@ public class MoHOfficeManagementService {
         // Create an admin user account for this office
         createAdminAccount(savedOffice, request.getAdminEmail());
         
-        logger.info("Created MoH Office: {} with admin account: {}", 
-            savedOffice.getDivisionalSecretariat(), request.getAdminEmail());
+        logger.info("Created MoH Office: {} in district: {} with admin account: {}", 
+            savedOffice.getDivisionalSecretariat(), savedOffice.getDistrict(), request.getAdminEmail());
         
         return savedOffice;
     }

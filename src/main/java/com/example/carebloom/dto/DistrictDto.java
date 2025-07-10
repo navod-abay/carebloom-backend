@@ -12,9 +12,4 @@ import lombok.Data;
 @AllArgsConstructor
 public class DistrictDto {
     private String name;
-    
-    // For future expansion we could add:
-    // private String code;
-    // private String region;
-    // private GeoLocation coordinates;
 }

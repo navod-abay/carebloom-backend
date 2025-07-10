@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class CreateMoHOfficeRequest {
     private String divisionalSecretariat;
+    private String district; // Add district field
     private String address;
     private Location location;
     private String officerInCharge;
