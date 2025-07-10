@@ -94,7 +94,7 @@ public class AuthService {
         }
         
         mother.setDistrict(request.getDistrict());
-        mother.setDivision(request.getDivision());
+        mother.setMohOfficeId(request.getMohOfficeId()); // Updated to use mohOfficeId
         mother.setRecordNumber(request.getRecordNumber());
         mother.setRegistrationStatus("complete");
         

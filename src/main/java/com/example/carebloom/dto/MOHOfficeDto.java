@@ -9,12 +9,10 @@ import lombok.Data;
  */
 @Data
 public class MOHOfficeDto {
-    private String id;
+    private String mohOfficeId;
     private String divisionalSecretariat;
     private String district;
     private String address;
-    private double latitude;
-    private double longitude;
     private String officerInCharge;
     private String contactNumber;
     
@@ -26,16 +24,10 @@ public class MOHOfficeDto {
      */
     public static MOHOfficeDto fromEntity(MOHOffice office) {
         MOHOfficeDto dto = new MOHOfficeDto();
-        dto.setId(office.getId());
+        dto.setMohOfficeId(office.getId());
         dto.setDivisionalSecretariat(office.getDivisionalSecretariat());
         dto.setDistrict(office.getDistrict());
-        dto.setAddress(office.getAddress());
-        
-        if (office.getLocation() != null) {
-            dto.setLatitude(office.getLocation().getLatitude());
-            dto.setLongitude(office.getLocation().getLongitude());
-        }
-        
+        dto.setAddress(office.getAddress());        
         dto.setOfficerInCharge(office.getOfficerInCharge());
         dto.setContactNumber(office.getContactNumber());
         
