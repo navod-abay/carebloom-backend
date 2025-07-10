@@ -5,6 +5,6 @@ import lombok.Data;
 @Data
 public class LocationRegistrationRequest {
     private String district;
-    private String division;
+    private String mohOfficeId; // Reference to MOHOffice ID
     private String recordNumber;
 }
