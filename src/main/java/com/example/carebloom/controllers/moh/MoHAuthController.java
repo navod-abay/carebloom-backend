@@ -50,6 +50,7 @@ public class MoHAuthController {
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
+            profile.setOfficeId(mohUser.getOfficeId()); // Include office ID
             
             return ResponseEntity.ok().body(profile);
         } catch (Exception e) {
@@ -85,6 +86,7 @@ public class MoHAuthController {
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
+            profile.setOfficeId(mohUser.getOfficeId()); // Include office ID
             
             return ResponseEntity.ok().body(profile);
         } catch (Exception e) {

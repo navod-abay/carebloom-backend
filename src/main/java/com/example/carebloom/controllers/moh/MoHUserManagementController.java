@@ -21,10 +21,10 @@ import java.util.Map;
 public class MoHUserManagementController {
 
     private static final Logger logger = LoggerFactory.getLogger(MoHUserManagementController.class);
-    
+
     @Autowired
     private MoHOfficeUserService mohOfficeUserService;
-    
+
     /**
      * Create a new MOH Office User (normal role) in pending state
      * Only MOH Office Admins can create new users
@@ -34,14 +34,14 @@ public class MoHUserManagementController {
     public ResponseEntity<MoHOfficeUser> createUser(
             @RequestBody Map<String, String> requestBody,
             Authentication authentication) {
-        
+
         String email = requestBody.get("email");
-        
+
         // Get the admin who is creating this user
         String createdBy = authentication.getName(); // This will be the Firebase UID
-        
+
         logger.info("MOH Office Admin {} creating new user with email {}", createdBy, email);
-        
+
         MoHOfficeUser createdUser = mohOfficeUserService.createMohUser(email, createdBy);
         return ResponseEntity.ok(createdUser);
     }
