@@ -51,7 +51,11 @@ public class MoHAuthController {
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
             
-            return ResponseEntity.ok().body(profile);
+            // Return the profile with officeId
+            return ResponseEntity.ok().body(Map.of(
+                "profile", profile,
+                "officeId", mohUser.getOfficeId()
+            ));
         } catch (Exception e) {
             logger.error("Error retrieving profile: {}", e.getMessage());
             return ResponseEntity.status(401).body(e.getMessage());
@@ -86,7 +90,11 @@ public class MoHAuthController {
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
             
-            return ResponseEntity.ok().body(profile);
+            // Return the profile with officeId
+            return ResponseEntity.ok().body(Map.of(
+                "profile", profile,
+                "officeId", mohUser.getOfficeId()
+            ));
         } catch (Exception e) {
             logger.error("Error signing in: {}", e.getMessage());
             return ResponseEntity.status(401).body(e.getMessage());
@@ -154,7 +162,11 @@ public class MoHAuthController {
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
             
-            return ResponseEntity.ok().body(profile);
+            // Return the profile with officeId
+            return ResponseEntity.ok().body(Map.of(
+                "profile", profile,
+                "officeId", mohUser.getOfficeId()
+            ));
         } catch (Exception e) {
             logger.error("Error retrieving user info: {}", e.getMessage());
             return ResponseEntity.status(401).body(e.getMessage());
