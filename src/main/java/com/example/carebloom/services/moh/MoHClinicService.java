@@ -18,7 +18,6 @@ import java.util.Optional;
 
 @Service
 public class MoHClinicService {
-    private static final Logger logger = LoggerFactory.getLogger(MoHClinicService.class);
 
     @Autowired
     private ClinicRepository clinicRepository;
@@ -38,21 +37,10 @@ public class MoHClinicService {
         return clinicRepository.findByMohOfficeIdAndIsActiveTrue(mohOfficeId);
     }
 
-    /**
-     * Get clinics by date for the current user's MoH office
-     */
     public List<Clinic> getClinicsByDate(String date) {
-        String mohOfficeId = getCurrentUserMohOfficeId();
-        if (mohOfficeId == null) {
-            logger.error("Failed to get MoH office ID for current user");
-            return clinicRepository.findByDateAndIsActiveTrue(date); // Fallback to all clinics by date
-        }
-        return clinicRepository.findByMohOfficeIdAndDateAndIsActiveTrue(mohOfficeId, date);
+        return clinicRepository.findByDateAndIsActiveTrue(date);
     }
 
-    /**
-     * Get a clinic by ID, ensuring it belongs to the current user's MoH office
-     */
     public Optional<Clinic> getClinicById(String id) {
         Optional<Clinic> clinicOpt = clinicRepository.findById(id);
         if (!clinicOpt.isPresent()) {
@@ -92,14 +80,10 @@ public class MoHClinicService {
             logger.info("Saved clinic: {}", savedClinic);
             return new CreateClinicResponse(true, "Clinic created successfully", savedClinic);
         } catch (Exception e) {
-            logger.error("Error creating clinic", e);
             return new CreateClinicResponse(false, "Failed to create clinic: " + e.getMessage());
         }
     }
 
-    /**
-     * Update a clinic, ensuring it belongs to the current user's MoH office
-     */
     public Clinic updateClinic(String id, Clinic clinic) {
         String mohOfficeId = getCurrentUserMohOfficeId();
         if (mohOfficeId == null) {

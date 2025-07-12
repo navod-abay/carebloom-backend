@@ -12,19 +12,25 @@ import org.springframework.web.server.ResponseStatusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
+import com.example.carebloom.services.admin.FirebaseUserService;
+import com.google.firebase.auth.UserRecord;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class MidwifeService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(MidwifeService.class);
-    
+
     @Autowired
     private MidwifeRepository midwifeRepository;
-    
+
+    @Autowired
+    private FirebaseUserService firebaseUserService;
+
     @Autowired
     private MoHOfficeUserRepository mohOfficeUserRepository;
-    
+
     /**
      * Get all midwives for the MOH office user's office
      */
@@ -32,40 +38,52 @@ public class MidwifeService {
         String officeId = getUserOfficeId(firebaseUid);
         return midwifeRepository.findByOfficeId(officeId);
     }
-    
+
     /**
      * Get a specific midwife by ID (within user's office)
      */
     public Midwife getMidwifeById(String midwifeId, String firebaseUid) {
         String officeId = getUserOfficeId(firebaseUid);
         Midwife midwife = midwifeRepository.findByOfficeIdAndId(officeId, midwifeId);
-        
+
         if (midwife == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Midwife not found");
         }
-        
+
         return midwife;
     }
-    
+
     /**
      * Create a new midwife
      */
     public Midwife createMidwife(MidwifeRequest request, String firebaseUid) {
         String officeId = getUserOfficeId(firebaseUid);
-        
+        request.setOfficeId(officeId);
+
         // Validate required fields
         validateMidwifeRequest(request, true);
-        
+
         // Check if email already exists
         if (midwifeRepository.findByEmail(request.getEmail()) != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
         }
-        
+
         // Check if phone already exists
         if (midwifeRepository.findByPhone(request.getPhone()) != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Phone number already exists");
         }
-        
+
+        // Create Firebase user for the midwife
+        try {
+            UserRecord firebaseUser = firebaseUserService.createFirebaseUser(request.getEmail());
+            logger.info("Created Firebase user for midwife: {} with UID: {}", request.getEmail(),
+                    firebaseUser.getUid());
+        } catch (Exception e) {
+            logger.error("Failed to create Firebase user for midwife: {}", request.getEmail(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to create user account for midwife");
+        }
+
         Midwife midwife = new Midwife();
         midwife.setOfficeId(officeId);
         midwife.setName(request.getName());
@@ -76,28 +94,56 @@ public class MidwifeService {
         midwife.setPhone(request.getPhone());
         midwife.setEmail(request.getEmail());
         midwife.setState("active"); // MOH office can directly activate midwives
-        midwife.setCreatedBy(firebaseUid);
+        midwife.setCreatedBy(officeId); // Assuming officeId is the creator
         midwife.setCreatedAt(LocalDateTime.now());
         midwife.setUpdatedAt(LocalDateTime.now());
-        
+
         logger.info("Creating new midwife: {} for office: {}", request.getEmail(), officeId);
         return midwifeRepository.save(midwife);
     }
-    
+
+    // approving a midwife
+    public Midwife approveMidwife(String midwifeId) {
+        Optional<Midwife> midwifeOpt = midwifeRepository.findById(midwifeId);
+        if (!midwifeOpt.isPresent()) {
+            throw new RuntimeException("Midwife not found with ID: " + midwifeId);
+        }
+
+        Midwife midwife = midwifeOpt.get();
+        midwife.setState("approved");
+        midwife.setUpdatedAt(LocalDateTime.now());
+
+        return midwifeRepository.save(midwife);
+    }
+
+    // suspending a midwife
+    public Midwife suspendMidwife(String midwifeId) {
+        Optional<Midwife> midwifeOpt = midwifeRepository.findById(midwifeId);
+        if (!midwifeOpt.isPresent()) {
+            throw new RuntimeException("Midwife not found with ID: " + midwifeId);
+        }
+
+        Midwife midwife = midwifeOpt.get();
+        midwife.setState("suspended");
+        midwife.setUpdatedAt(LocalDateTime.now());
+
+        return midwifeRepository.save(midwife);
+    }
+
     /**
      * Update an existing midwife
      */
     public Midwife updateMidwife(String midwifeId, MidwifeRequest request, String firebaseUid) {
         String officeId = getUserOfficeId(firebaseUid);
         Midwife existingMidwife = midwifeRepository.findByOfficeIdAndId(officeId, midwifeId);
-        
+
         if (existingMidwife == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Midwife not found");
         }
-        
+
         // Validate request
         validateMidwifeRequest(request, false);
-        
+
         // Check email uniqueness if being updated
         if (request.getEmail() != null && !request.getEmail().equals(existingMidwife.getEmail())) {
             Midwife emailCheck = midwifeRepository.findByEmail(request.getEmail());
@@ -105,7 +151,7 @@ public class MidwifeService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
             }
         }
-        
+
         // Check phone uniqueness if being updated
         if (request.getPhone() != null && !request.getPhone().equals(existingMidwife.getPhone())) {
             Midwife phoneCheck = midwifeRepository.findByPhone(request.getPhone());
@@ -113,7 +159,7 @@ public class MidwifeService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Phone number already exists");
             }
         }
-        
+
         // Update fields if provided
         if (request.getName() != null) {
             existingMidwife.setName(request.getName());
@@ -142,52 +188,52 @@ public class MidwifeService {
         if (request.getState() != null) {
             existingMidwife.setState(request.getState());
         }
-        
+
         existingMidwife.setUpdatedAt(LocalDateTime.now());
-        
+
         logger.info("Updating midwife: {} for office: {}", existingMidwife.getEmail(), officeId);
         return midwifeRepository.save(existingMidwife);
     }
-    
+
     /**
      * Delete a midwife
      */
     public void deleteMidwife(String midwifeId, String firebaseUid) {
         String officeId = getUserOfficeId(firebaseUid);
         Midwife midwife = midwifeRepository.findByOfficeIdAndId(officeId, midwifeId);
-        
+
         if (midwife == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Midwife not found");
         }
-        
+
         logger.info("Deleting midwife: {} from office: {}", midwife.getEmail(), officeId);
         midwifeRepository.delete(midwife);
     }
-    
+
     /**
      * Get midwives by clinic
      */
     public List<Midwife> getMidwivesByClinic(String clinic, String firebaseUid) {
         String officeId = getUserOfficeId(firebaseUid);
         List<Midwife> allMidwives = midwifeRepository.findByOfficeId(officeId);
-        
+
         return allMidwives.stream()
                 .filter(midwife -> clinic.equals(midwife.getClinic()))
                 .toList();
     }
-    
+
     /**
      * Get midwives by specialization
      */
     public List<Midwife> getMidwivesBySpecialization(String specialization, String firebaseUid) {
         String officeId = getUserOfficeId(firebaseUid);
         List<Midwife> allMidwives = midwifeRepository.findByOfficeId(officeId);
-        
+
         return allMidwives.stream()
                 .filter(midwife -> specialization.equals(midwife.getSpecialization()))
                 .toList();
     }
-    
+
     /**
      * Helper method to get user's office ID
      */
@@ -196,14 +242,14 @@ public class MidwifeService {
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found");
         }
-        
+
         if (!"active".equals(user.getState())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User account is not active");
         }
-        
+
         return user.getOfficeId();
     }
-    
+
     /**
      * Validate midwife request data
      */
@@ -213,38 +259,38 @@ public class MidwifeService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
             }
         }
-        
+
         if (isCreate || request.getClinic() != null) {
             if (request.getClinic() == null || request.getClinic().trim().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Clinic is required");
             }
         }
-        
+
         if (isCreate || request.getSpecialization() != null) {
             if (request.getSpecialization() == null || request.getSpecialization().trim().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Specialization is required");
             }
         }
-        
+
         if (isCreate || request.getPhone() != null) {
             if (request.getPhone() == null || request.getPhone().trim().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Phone is required");
             }
         }
-        
+
         if (isCreate || request.getEmail() != null) {
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
             }
-            
+
             if (!request.getEmail().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid email format");
             }
         }
-        
+
         if (request.getYearsOfExperience() != null && request.getYearsOfExperience() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Years of experience cannot be negative");
-            
+
         }
     }
 }

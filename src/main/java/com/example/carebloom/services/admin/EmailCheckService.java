@@ -39,7 +39,7 @@ public class EmailCheckService {
                     return false;
                 }
             }
-            
+
             // For other exceptions, log but don't expose error details
             logger.error("Error checking email in Firebase: {}", e.getMessage());
             throw new RuntimeException("Error checking email in Firebase authentication");

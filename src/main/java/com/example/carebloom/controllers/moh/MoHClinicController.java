@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -31,7 +33,9 @@ public class MoHClinicController {
     @GetMapping("/clinics")
     public ResponseEntity<?> getAllClinicsByMohOffice() {
         try {
-            List<Clinic> clinics = clinicService.getAllClinicsByMohOffice();
+            // Get the current user's ID from security context
+            String currentUserId = getCurrentUserId();
+            List<Clinic> clinics = clinicService.getAllClinicsByUserId(currentUserId);
             return ResponseEntity.ok(clinics);
         } catch (Exception e) {
             logger.error("Error getting clinics", e);
@@ -47,6 +51,8 @@ public class MoHClinicController {
     @GetMapping("/clinics/date/{date}")
     public ResponseEntity<?> getClinicsByDate(@PathVariable String date) {
         try {
+            // For now, just get all clinics by date (not filtered by user)
+            // You can modify this to filter by user if needed
             List<Clinic> clinics = clinicService.getClinicsByDate(date);
             return ResponseEntity.ok(clinics);
         } catch (Exception e) {
@@ -85,7 +91,9 @@ public class MoHClinicController {
     @PostMapping("/clinics")
     public ResponseEntity<CreateClinicResponse> createClinic(@RequestBody Clinic clinic) {
         try {
-            CreateClinicResponse response = clinicService.createClinic(clinic);
+            // Get the current user's ID from security context
+            String currentUserId = getCurrentUserId();
+            CreateClinicResponse response = clinicService.createClinic(clinic, currentUserId);
             if (response.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.CREATED).body(response);
             } else {
@@ -141,5 +149,16 @@ public class MoHClinicController {
             errorResponse.put("error", "Failed to delete clinic: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
+    }
+
+    /**
+     * Helper method to get the current user's ID from the security context
+     */
+    private String getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            return authentication.getName(); // This should be the Firebase UID
+        }
+        throw new RuntimeException("No authenticated user found");
     }
 }
