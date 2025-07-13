@@ -19,6 +19,8 @@ import java.util.Optional;
 @Service
 public class MoHClinicService {
 
+    private static final Logger logger = LoggerFactory.getLogger(MoHClinicService.class);
+
     @Autowired
     private ClinicRepository clinicRepository;
 

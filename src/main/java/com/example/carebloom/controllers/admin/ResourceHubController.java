@@ -4,7 +4,6 @@ import com.example.carebloom.models.Article;
 import com.example.carebloom.models.Hint;
 import com.example.carebloom.repositories.ArticleRepository;
 import com.example.carebloom.repositories.HintRepository;
-import com.example.carebloom.services.admin.ResourceHubService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,8 +21,6 @@ public class ResourceHubController {
     @Autowired
     private HintRepository hintRepository;
 
-    @Autowired
-    private ResourceHubService resourceHubService;
 
     @GetMapping("/hints")
     public ResponseEntity<List<Hint>> getAllHints() {

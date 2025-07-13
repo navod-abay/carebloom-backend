@@ -1,10 +1,9 @@
 package com.example.carebloom.controllers.moh;
 
+import com.example.carebloom.dto.midwife.MidwifeBasicDTO;
 import com.example.carebloom.models.Midwife;
 import com.example.carebloom.services.moh.MidwifeService;
-import com.example.carebloom.dto.CreateMidwifeRequest;
-import com.example.carebloom.dto.UpdateMidwifeRequest;
-import com.example.carebloom.dto.admin.MidwifeRequest;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/moh")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "${app.cors.moh-origin}")
 public class MidwifeController {
 
     @Autowired
@@ -30,9 +29,9 @@ public class MidwifeController {
         return ResponseEntity.ok(midwives);
     }
 
-    @PostMapping("/midwives")
+    @PostMapping("/midwife")
     public ResponseEntity<Midwife> createMidwife(
-            @RequestBody MidwifeRequest request,
+            @RequestBody MidwifeBasicDTO request,
             Authentication authentication) {
 
         String firebaseUid = authentication.getName();
@@ -40,21 +39,11 @@ public class MidwifeController {
         return ResponseEntity.status(HttpStatus.CREATED).body(midwife);
     }
 
-    @PutMapping("/{officeId}/midwives/{midwifeId}/approve")
-    public ResponseEntity<Midwife> approveMidwife(
-            @PathVariable String officeId,
-            @PathVariable String midwifeId,
-            Authentication authentication) {
-
-        Midwife approvedMidwife = midwifeService.approveMidwife(midwifeId);
-        return ResponseEntity.ok(approvedMidwife);
-    }
-
     @PutMapping("/{midwifeId}")
     public ResponseEntity<Midwife> updateMidwife(
             @PathVariable String officeId,
             @PathVariable String midwifeId,
-            @RequestBody MidwifeRequest request,
+            @RequestBody MidwifeBasicDTO request,
             Authentication authentication) {
 
         String firebaseUid = authentication.getName();
