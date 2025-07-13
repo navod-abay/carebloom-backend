@@ -1,11 +1,15 @@
 package com.example.carebloom.repositories;
 
+import com.example.carebloom.dto.midwife.MidwifeBasicDTO;
 import com.example.carebloom.models.Midwife;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import java.util.List;
 
 public interface MidwifeRepository extends MongoRepository<Midwife, String> {
+    
+    @Query(value = "{'office_id': ?0}", fields = "{'_id': 1, 'office_id': 1, 'name': 1, 'phone': 1, 'email': 1}")
+    List<MidwifeBasicDTO> findBasicDetailsByOfficeId(String officeId);
     
     @Query("{'office_id': ?0}")
     List<Midwife> findByOfficeId(String officeId);

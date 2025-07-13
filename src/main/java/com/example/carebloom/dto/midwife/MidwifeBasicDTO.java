@@ -8,7 +8,7 @@ public class MidwifeBasicDTO {
     private String officeId;
     private String name;
     private String phone;
-    private String email;  
+    private String email;
 }
 
 

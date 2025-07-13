@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.carebloom.controllers.moh.MoHAuthController;
 import com.example.carebloom.models.UserProfile;
 import com.example.carebloom.repositories.MidwifeRepository;
 import com.example.carebloom.models.Midwife;;
@@ -20,7 +19,7 @@ import com.example.carebloom.models.Midwife;;
 @RequestMapping("/api/v1/midwife/auth")
 public class MidwifeAuthController {
 
-    private static final Logger logger = LoggerFactory.getLogger(MoHAuthController.class);
+    private static final Logger logger = LoggerFactory.getLogger(MidwifeAuthController.class);
 
     @Autowired
     private  MidwifeRepository midwifeRepository;
