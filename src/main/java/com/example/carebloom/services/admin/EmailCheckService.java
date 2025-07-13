@@ -28,7 +28,7 @@ public class EmailCheckService {
             // Try to get the user by email
             var userRecords = FirebaseAuth.getInstance().getUserByEmailAsync(email).get();
             // If we get here, the user exists
-            logger.debug("Email {} exists in Firebase Auth", email);
+            logger.debug("Email {} exists in Firebase Auth", userRecords.getEmail());
             return true;
         } catch (Exception e) {
             // FirebaseAuthException with USER_NOT_FOUND code means the email doesn't exist
