@@ -2,6 +2,8 @@ package com.example.carebloom.controllers.moh;
 
 import com.example.carebloom.dto.midwife.MidwifeBasicDTO;
 import com.example.carebloom.models.Midwife;
+import com.example.carebloom.models.MoHOfficeUser;
+import com.example.carebloom.repositories.MidwifeRepository;
 import com.example.carebloom.services.moh.MidwifeService;
 
 import org.springframework.security.core.Authentication;
@@ -9,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 
 @RestController
@@ -19,13 +23,16 @@ public class MidwifeController {
     @Autowired
     private MidwifeService midwifeService;
 
-    @GetMapping("/{officeId}/midwives")
-    public ResponseEntity<List<Midwife>> getMidwivesByOffice(
-            @PathVariable String officeId,
-            Authentication authentication) {
+    @Autowired
+    private MidwifeRepository midwifeRepository;
 
-        String firebaseUid = authentication.getName();
-        List<Midwife> midwives = midwifeService.getAllMidwives(firebaseUid);
+    @GetMapping("/midwives")
+    public ResponseEntity<List<MidwifeBasicDTO>> getMidwivesByOffice(Authentication authentication) {
+
+        String officeId = getUserOfficeId(authentication.getName());
+
+
+        List<MidwifeBasicDTO> midwives = midwifeRepository.findBasicDetailsByOfficeId(officeId);
         return ResponseEntity.ok(midwives);
     }
 
@@ -60,5 +67,18 @@ public class MidwifeController {
         String firebaseUid = authentication.getName();
         midwifeService.deleteMidwife(midwifeId, firebaseUid);
         return ResponseEntity.noContent().build();
+    }
+
+    private String getUserOfficeId(String firebaseUid) {
+        Midwife user = midwifeRepository.findByFirebaseUid(firebaseUid);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found");
+        }
+
+        if (!"active".equals(user.getState())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User account is not active");
+        }
+
+        return user.getOfficeId();
     }
 }

@@ -16,6 +16,7 @@ import com.example.carebloom.services.admin.FirebaseUserService;
 import com.google.firebase.auth.UserRecord;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class MidwifeService {
@@ -34,9 +35,9 @@ public class MidwifeService {
     /**
      * Get all midwives for the MOH office user's office
      */
-    public List<Midwife> getAllMidwives(String firebaseUid) {
+    public List<MidwifeBasicDTO> getAllMidwives(String firebaseUid) {
         String officeId = getUserOfficeId(firebaseUid);
-        return midwifeRepository.findByOfficeId(officeId);
+        return midwifeRepository.findBasicDetailsByOfficeId(officeId);
     }
 
     /**
