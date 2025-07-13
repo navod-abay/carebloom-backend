@@ -10,15 +10,16 @@ import java.time.LocalDateTime;
 public class Workshop {
     @Id
     private String id;
-    
-    private String userId;      // ID of the user who created this workshop
-    
+
+    private String userId; // ID of the user who created this workshop
+    private String mohOfficeId; // ID of the MOH office associated with this workshop
+
     private String title;
-    private String date;        // YYYY-MM-DD format
-    private String time;        // HH:MM format
-    private String venue;       // Location/venue name
+    private String date; // YYYY-MM-DD format
+    private String time; // HH:MM format
+    private String venue; // Location/venue name
     private String description; // Workshop description
-    private String category;    // Workshop category
+    private String category; // Workshop category
     private boolean isActive = true;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
