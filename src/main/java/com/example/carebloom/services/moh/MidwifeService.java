@@ -1,10 +1,14 @@
 package com.example.carebloom.services.moh;
 
 import com.example.carebloom.dto.midwife.MidwifeBasicDTO;
+import com.example.carebloom.dto.midwife.MidwifeExtendedDTO;
+import com.example.carebloom.dto.mother.MotherBasicDTO;
+import com.example.carebloom.models.Mother;
 import com.example.carebloom.models.Midwife;
 import com.example.carebloom.models.MoHOfficeUser;
 import com.example.carebloom.repositories.MidwifeRepository;
 import com.example.carebloom.repositories.MoHOfficeUserRepository;
+import com.example.carebloom.repositories.MotherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,7 +20,6 @@ import com.example.carebloom.services.admin.FirebaseUserService;
 import com.google.firebase.auth.UserRecord;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class MidwifeService {
@@ -31,6 +34,9 @@ public class MidwifeService {
 
     @Autowired
     private MoHOfficeUserRepository mohOfficeUserRepository;
+
+    @Autowired
+    private MotherRepository motherRepository;
 
     /**
      * Get all midwives for the MOH office user's office
@@ -176,6 +182,44 @@ public class MidwifeService {
 
         logger.info("Deleting midwife: {} from office: {}", midwife.getEmail(), officeId);
         midwifeRepository.delete(midwife);
+    }
+
+    /**
+     * Get extended midwife details
+     */
+    public MidwifeExtendedDTO getMidwifeExtendedDetails(String midwifeId, String firebaseUid) {
+        String officeId = getUserOfficeId(firebaseUid);
+        Midwife midwife = midwifeRepository.findByOfficeIdAndId(officeId, midwifeId);
+        if (midwife == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Midwife not found");
+        }
+
+        MidwifeExtendedDTO dto = new MidwifeExtendedDTO();
+        dto.setId(midwife.getId());
+        dto.setOfficeId(midwife.getOfficeId());
+        dto.setName(midwife.getName());
+        dto.setPhone(midwife.getPhone());
+        dto.setEmail(midwife.getEmail());
+        dto.setAssignedUnitIds(midwife.getAssignedUnitIds());
+
+        // Map assigned mothers
+        if (midwife.getAssignedMotherIds() != null && !midwife.getAssignedMotherIds().isEmpty()) {
+            List<MotherBasicDTO> assignedMothers = midwife.getAssignedMotherIds().stream()
+                .map(motherId -> {
+                    Mother mother = motherRepository.findById(motherId).orElse(null);
+                    if (mother == null) return null;
+                    MotherBasicDTO mDto = new MotherBasicDTO();
+                    mDto.setName(mother.getName());
+                    mDto.setDueDate(mother.getDueDate());
+                    mDto.setPhone(mother.getPhone());
+                    return mDto;
+                })
+                .filter(m -> m != null)
+                .toList();
+            dto.setAssignedMothers(assignedMothers);
+        }
+
+        return dto;
     }
 
     /**

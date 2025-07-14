@@ -1,9 +1,11 @@
 package com.example.carebloom.controllers.moh;
 
 import com.example.carebloom.dto.midwife.MidwifeBasicDTO;
+import com.example.carebloom.dto.midwife.MidwifeExtendedDTO;
 import com.example.carebloom.models.Midwife;
 import com.example.carebloom.models.MoHOfficeUser;
 import com.example.carebloom.repositories.MidwifeRepository;
+import com.example.carebloom.repositories.MoHOfficeUserRepository;
 import com.example.carebloom.services.moh.MidwifeService;
 
 import org.springframework.security.core.Authentication;
@@ -25,6 +27,9 @@ public class MidwifeController {
 
     @Autowired
     private MidwifeRepository midwifeRepository;
+
+    @Autowired
+    private MoHOfficeUserRepository mohOfficeUserRepository;
 
     @GetMapping("/midwives")
     public ResponseEntity<List<MidwifeBasicDTO>> getMidwivesByOffice(Authentication authentication) {
@@ -69,8 +74,17 @@ public class MidwifeController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/midwife/{midwifeId}")
+    public ResponseEntity<MidwifeExtendedDTO> getMidwifeExtendedDetails(
+            @PathVariable String midwifeId,
+            Authentication authentication) {
+        String firebaseUid = authentication.getName();
+        MidwifeExtendedDTO dto = midwifeService.getMidwifeExtendedDetails(midwifeId, firebaseUid);
+        return ResponseEntity.ok(dto);
+    }
+
     private String getUserOfficeId(String firebaseUid) {
-        Midwife user = midwifeRepository.findByFirebaseUid(firebaseUid);
+        MoHOfficeUser user = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found");
         }
