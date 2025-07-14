@@ -21,6 +21,6 @@ public class Mother {
     
     // Location details (Final Step)
     private String district;
-    private String division;
+    private String mohOfficeId;
     private String recordNumber;
 }
