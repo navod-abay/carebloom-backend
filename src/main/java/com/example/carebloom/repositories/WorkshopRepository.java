@@ -7,24 +7,23 @@ import java.util.List;
 
 @Repository
 public interface WorkshopRepository extends MongoRepository<Workshop, String> {
-    // Find by active status and MoH office
     List<Workshop> findByIsActiveTrueAndMohOfficeId(String mohOfficeId);
-    
+
     // Find by user ID and active status
     List<Workshop> findByUserIdAndIsActiveTrue(String userId);
-    
-    // Find by date and MoH office (for active workshops)
-    List<Workshop> findByDateAndIsActiveTrueAndMohOfficeId(String date, String mohOfficeId);
-    
-    // Find by category and MoH office (for active workshops)
-    List<Workshop> findByCategoryAndIsActiveTrueAndMohOfficeId(String category, String mohOfficeId);
-    
-    // Find by venue and MoH office (for active workshops)
-    List<Workshop> findByVenueAndIsActiveTrueAndMohOfficeId(String venue, String mohOfficeId);
-    
-    // Find all workshops for MoH office (including inactive)
-    List<Workshop> findByMohOfficeId(String mohOfficeId);
-    
+
+    // Find by date and user ID (for active workshops)
+    List<Workshop> findByDateAndUserIdAndIsActiveTrue(String date, String userId);
+
+    // Find by category and user ID (for active workshops)
+    List<Workshop> findByCategoryAndUserIdAndIsActiveTrue(String category, String userId);
+
+    // Find by venue and user ID (for active workshops)
+    List<Workshop> findByVenueAndUserIdAndIsActiveTrue(String venue, String userId);
+
     // Find all workshops for user (including inactive)
     List<Workshop> findByUserId(String userId);
+
+    // Find all active workshops
+    List<Workshop> findByIsActiveTrue();
 }

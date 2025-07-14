@@ -24,102 +24,100 @@ public class MoHWorkshopService {
     private MoHOfficeUserRepository mohOfficeUserRepository;
 
     /**
-     * Get all workshops for a specific user's MoH office
+     * Get all workshops for a specific user
      */
     public List<Workshop> getAllWorkshopsForUser(String userEmail) {
-        String mohOfficeId = getMohOfficeIdForUser(userEmail);
-        if (mohOfficeId == null) {
+        String userId = getUserIdForUser(userEmail);
+        if (userId == null) {
             throw new SecurityException("User not found or not authorized");
         }
-        return workshopRepository.findByIsActiveTrueAndMohOfficeId(mohOfficeId);
+        return workshopRepository.findByUserIdAndIsActiveTrue(userId);
     }
 
     /**
-     * Get active workshops for a specific user's MoH office
+     * Get active workshops for a specific user
      */
     public List<Workshop> getActiveWorkshopsForUser(String userEmail) {
-        String mohOfficeId = getMohOfficeIdForUser(userEmail);
-        if (mohOfficeId == null) {
+        String userId = getUserIdForUser(userEmail);
+        if (userId == null) {
             throw new SecurityException("User not found or not authorized");
         }
-        return workshopRepository.findByIsActiveTrueAndMohOfficeId(mohOfficeId);
+        return workshopRepository.findByUserIdAndIsActiveTrue(userId);
     }
 
     /**
-     * Get upcoming workshops for a specific user's MoH office
+     * Get upcoming workshops for a specific user
      */
     public List<Workshop> getUpcomingWorkshopsForUser(String userEmail) {
-        String mohOfficeId = getMohOfficeIdForUser(userEmail);
-        if (mohOfficeId == null) {
+        String userId = getUserIdForUser(userEmail);
+        if (userId == null) {
             throw new SecurityException("User not found or not authorized");
         }
         // For now, just return all active workshops since we're using string dates
-        return workshopRepository.findByIsActiveTrueAndMohOfficeId(mohOfficeId);
+        return workshopRepository.findByUserIdAndIsActiveTrue(userId);
     }
 
     /**
-     * Get workshops by date for a specific user's MoH office
+     * Get workshops by date for a specific user
      */
     public List<Workshop> getWorkshopsByDate(String date, String userEmail) {
-        String mohOfficeId = getMohOfficeIdForUser(userEmail);
-        if (mohOfficeId == null) {
+        String userId = getUserIdForUser(userEmail);
+        if (userId == null) {
             throw new SecurityException("User not found or not authorized");
         }
-        return workshopRepository.findByDateAndIsActiveTrueAndMohOfficeId(date, mohOfficeId);
+        return workshopRepository.findByDateAndUserIdAndIsActiveTrue(date, userId);
     }
 
     /**
-     * Get workshops by category for a specific user's MoH office
+     * Get workshops by category for a specific user
      */
     public List<Workshop> getWorkshopsByCategory(String category, String userEmail) {
-        String mohOfficeId = getMohOfficeIdForUser(userEmail);
-        if (mohOfficeId == null) {
+        String userId = getUserIdForUser(userEmail);
+        if (userId == null) {
             throw new SecurityException("User not found or not authorized");
         }
-        return workshopRepository.findByCategoryAndIsActiveTrueAndMohOfficeId(category, mohOfficeId);
+        return workshopRepository.findByCategoryAndUserIdAndIsActiveTrue(category, userId);
     }
 
     /**
-     * Get workshops by venue for a specific user's MoH office
+     * Get workshops by venue for a specific user
      */
     public List<Workshop> getWorkshopsByVenue(String venue, String userEmail) {
-        String mohOfficeId = getMohOfficeIdForUser(userEmail);
-        if (mohOfficeId == null) {
+        String userId = getUserIdForUser(userEmail);
+        if (userId == null) {
             throw new SecurityException("User not found or not authorized");
         }
-        return workshopRepository.findByVenueAndIsActiveTrueAndMohOfficeId(venue, mohOfficeId);
+        return workshopRepository.findByVenueAndUserIdAndIsActiveTrue(venue, userId);
     }
 
     /**
-     * Get a workshop by ID, ensuring it belongs to the user's MoH office
+     * Get a workshop by ID, ensuring it belongs to the user
      */
     public Optional<Workshop> getWorkshopById(String id, String userEmail) {
-        String mohOfficeId = getMohOfficeIdForUser(userEmail);
-        if (mohOfficeId == null) {
+        String userId = getUserIdForUser(userEmail);
+        if (userId == null) {
             throw new SecurityException("User not found or not authorized");
         }
 
         Optional<Workshop> workshopOpt = workshopRepository.findById(id);
-        if (workshopOpt.isPresent() && workshopOpt.get().getMohOfficeId().equals(mohOfficeId)) {
+        if (workshopOpt.isPresent() && workshopOpt.get().getUserId().equals(userId)) {
             return workshopOpt;
         }
         return Optional.empty();
     }
 
     /**
-     * Create a new workshop for a specific user's MoH office
+     * Create a new workshop for a specific user
      */
     public CreateWorkshopResponse createWorkshop(Workshop workshop, String userEmail) {
         try {
-            String mohOfficeId = getMohOfficeIdForUser(userEmail);
             String userId = getUserIdForUser(userEmail);
             
-            if (mohOfficeId == null || userId == null) {
+            if (userId == null) {
                 throw new SecurityException("User not found or not authorized");
             }
 
             workshop.setUserId(userId);
-            workshop.setMohOfficeId(mohOfficeId);
             workshop.setCreatedAt(LocalDateTime.now());
             workshop.setUpdatedAt(LocalDateTime.now());
             workshop.setActive(true);
@@ -137,11 +135,11 @@ public class MoHWorkshopService {
     }
 
     /**
-     * Update a workshop, ensuring it belongs to the user's MoH office
+     * Update a workshop, ensuring it belongs to the user
      */
     public Optional<Workshop> updateWorkshop(String id, Workshop workshop, String userEmail) {
-        String mohOfficeId = getMohOfficeIdForUser(userEmail);
-        if (mohOfficeId == null) {
+        String userId = getUserIdForUser(userEmail);
+        if (userId == null) {
             throw new SecurityException("User not found or not authorized");
         }
 
@@ -151,10 +149,10 @@ public class MoHWorkshopService {
         }
 
         Workshop existingWorkshop = existingWorkshopOpt.get();
-        // Verify that the workshop belongs to this MoH office
-        if (!existingWorkshop.getMohOfficeId().equals(mohOfficeId)) {
-            logger.warn("User attempted to update workshop from another MoH office: {}", id);
-            throw new SecurityException("Access denied: Workshop belongs to different MoH office");
+        // Verify that the workshop belongs to this user
+        if (!existingWorkshop.getUserId().equals(userId)) {
+            logger.warn("User attempted to update workshop from another user: {}", id);
+            throw new SecurityException("Access denied: Workshop belongs to different user");
         }
 
         existingWorkshop.setTitle(workshop.getTitle());
@@ -170,11 +168,11 @@ public class MoHWorkshopService {
     }
 
     /**
-     * Delete (hard delete) a workshop, ensuring it belongs to the user's MoH office
+     * Delete (hard delete) a workshop, ensuring it belongs to the user
      */
     public boolean deleteWorkshop(String id, String userEmail) {
-        String mohOfficeId = getMohOfficeIdForUser(userEmail);
-        if (mohOfficeId == null) {
+        String userId = getUserIdForUser(userEmail);
+        if (userId == null) {
             throw new SecurityException("User not found or not authorized");
         }
 
@@ -184,33 +182,16 @@ public class MoHWorkshopService {
         }
 
         Workshop workshop = workshopOpt.get();
-        // Verify that the workshop belongs to this MoH office
-        if (!workshop.getMohOfficeId().equals(mohOfficeId)) {
-            logger.warn("User attempted to delete workshop from another MoH office: {}", id);
-            throw new SecurityException("Access denied: Workshop belongs to different MoH office");
+        // Verify that the workshop belongs to this user
+        if (!workshop.getUserId().equals(userId)) {
+            logger.warn("User attempted to delete workshop from another user: {}", id);
+            throw new SecurityException("Access denied: Workshop belongs to different user");
         }
 
         // Hard delete - completely remove from database
         workshopRepository.delete(workshop);
         logger.info("Workshop with ID {} has been permanently deleted from database", id);
         return true;
-    }
-
-    /**
-     * Helper method to get MoH office ID for a specific user
-     */
-    private String getMohOfficeIdForUser(String userEmail) {
-        try {
-            MoHOfficeUser mohUser = mohOfficeUserRepository.findByFirebaseUid(userEmail);
-            if (mohUser == null) {
-                logger.error("No MoH user found for email: {}", userEmail);
-                return null;
-            }
-            return mohUser.getOfficeId();
-        } catch (Exception e) {
-            logger.error("Error getting MoH office ID for user: {}", userEmail, e);
-            return null;
-        }
     }
 
     /**

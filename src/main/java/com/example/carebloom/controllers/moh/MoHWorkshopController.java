@@ -39,7 +39,7 @@ public class MoHWorkshopController {
     }
 
     /**
-     * Get all workshops for the authenticated user's MoH office
+     * Get all workshops for the authenticated user
      */
     @GetMapping("/workshops")
     public ResponseEntity<?> getAllWorkshops(Authentication authentication) {
@@ -78,7 +78,7 @@ public class MoHWorkshopController {
     }
 
     /**
-     * Get workshops by date for the authenticated user's MoH office
+     * Get workshops by date for the authenticated user
      */
     @GetMapping("/workshops/by-date")
     public ResponseEntity<?> getWorkshopsByDate(
@@ -99,7 +99,7 @@ public class MoHWorkshopController {
     }
 
     /**
-     * Get workshops by category for the authenticated user's MoH office
+     * Get workshops by category for the authenticated user
      */
     @GetMapping("/workshops/by-category")
     public ResponseEntity<?> getWorkshopsByCategory(
@@ -118,7 +118,7 @@ public class MoHWorkshopController {
     }
 
     /**
-     * Get workshops by venue for the authenticated user's MoH office
+     * Get workshops by venue for the authenticated user
      */
     @GetMapping("/workshops/by-venue")
     public ResponseEntity<?> getWorkshopsByVenue(
@@ -186,7 +186,7 @@ public class MoHWorkshopController {
     }
 
     /**
-     * Get active workshops for the authenticated user's MoH office
+     * Get active workshops for the authenticated user
      */
     @GetMapping("/workshops/active")
     public ResponseEntity<?> getActiveWorkshops(Authentication authentication) {
@@ -203,7 +203,7 @@ public class MoHWorkshopController {
     }
 
     /**
-     * Get upcoming workshops for the authenticated user's MoH office
+     * Get upcoming workshops for the authenticated user
      */
     @GetMapping("/workshops/upcoming")
     public ResponseEntity<?> getUpcomingWorkshops(Authentication authentication) {

@@ -31,11 +31,13 @@ public class SecurityConfig {
             .addFilterBefore(roleAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/v1/mother/auth/**").permitAll()
+                .requestMatchers("/api/v1/public/**").permitAll() // All public endpoints
+                .requestMatchers("/api/v1/mothers/auth/**").permitAll()
                 .requestMatchers("/api/v1/admin/auth/**").permitAll()
                 .requestMatchers("/api/v1/midwife/auth/**").permitAll()
                 .requestMatchers("/api/v1/vendor/auth/**").permitAll()
                 .requestMatchers("/api/v1/moh/auth/**").permitAll()
+                .requestMatchers("/api/v1/mothers/**").hasRole("MOTHER")
                 .requestMatchers("/api/v1/hints/**").permitAll()
                 .requestMatchers("/api/v1/hints").permitAll()
                 .requestMatchers("/api/v1/articles/**").permitAll()
