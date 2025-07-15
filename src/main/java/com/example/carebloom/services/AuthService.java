@@ -96,6 +96,7 @@ public class AuthService {
         mother.setDistrict(request.getDistrict());
         mother.setMohOfficeId(request.getMohOfficeId()); // Updated to use mohOfficeId
         mother.setRecordNumber(request.getRecordNumber());
+        mother.setAreaMidwifeId(request.getAreaMidwifeId()); // Updated to use areaMidwifeId
         mother.setRegistrationStatus("complete");
         
         mother = motherRepository.save(mother);
@@ -123,6 +124,14 @@ public class AuthService {
         mother.setRegistrationStatus("location_pending");
         
         mother = motherRepository.save(mother);
+        return createUserProfile(mother);
+    }
+    
+    public UserProfile getProfileByFirebaseUid(String firebaseUid) {
+        Mother mother = motherRepository.findByFirebaseUid(firebaseUid);
+        if (mother == null) {
+            return null;
+        }
         return createUserProfile(mother);
     }
 }

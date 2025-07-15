@@ -22,5 +22,6 @@ public class Mother {
     // Location details (Final Step)
     private String district;
     private String mohOfficeId; // Reference to MOHOffice table
+    private String areaMidwifeId; // Reference to Midwife table
     private String recordNumber;
 }
