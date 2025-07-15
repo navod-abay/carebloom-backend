@@ -10,19 +10,20 @@ import com.example.carebloom.repositories.WorkshopRepository;
 import com.example.carebloom.dto.mother.MotherDetailsDto;
 import com.example.carebloom.models.Child;
 import com.example.carebloom.models.Workshop;
+import com.example.carebloom.services.moh.MoHMotherService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.ArrayList;
 import java.util.Optional;
 
 @RestController
@@ -46,6 +47,9 @@ public class MoHMotherController {
 
     @Autowired
     private WorkshopRepository workshopRepository;
+
+    @Autowired
+    private MoHMotherService mohMotherService;
 
     /**
      * Retrieves all mothers registered with a specific MOH office
@@ -201,6 +205,23 @@ public class MoHMotherController {
             logger.error("Error retrieving mother details for ID: {}", motherId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to retrieve mother details: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Accept a mother's registration (change status from 'completed' to 'accepted')
+     */
+    @PostMapping("/mothers/{motherId}/accept")
+    public ResponseEntity<?> acceptMotherRegistration(@PathVariable String motherId) {
+        try {
+            mohMotherService.acceptMotherRegistration(motherId);
+            return ResponseEntity.ok(Map.of("message", "Mother registration accepted"));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            logger.error("Error accepting mother registration for ID: {}", motherId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to accept mother registration: " + e.getMessage()));
         }
     }
 }
