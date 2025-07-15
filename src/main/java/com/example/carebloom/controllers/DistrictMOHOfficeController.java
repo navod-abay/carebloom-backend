@@ -2,11 +2,15 @@ package com.example.carebloom.controllers;
 
 import com.example.carebloom.models.MOHOffice;
 import com.example.carebloom.dto.MOHOfficeDto;
+import com.example.carebloom.dto.midwife.MidwifeBasicDTO;
 import com.example.carebloom.repositories.MOHOfficeRepository;
+import com.example.carebloom.repositories.MidwifeRepository;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +22,7 @@ import java.util.stream.Collectors;
  * This endpoint is publicly accessible for anyone to find MOH offices by district.
  */
 @RestController
-@RequestMapping("/api/v1/public/moh-offices")
+@RequestMapping("/api/v1/public")
 @CrossOrigin(origins = "*")
 public class DistrictMOHOfficeController {
     private static final Logger logger = LoggerFactory.getLogger(DistrictMOHOfficeController.class);
@@ -26,13 +30,16 @@ public class DistrictMOHOfficeController {
     @Autowired
     private MOHOfficeRepository mohOfficeRepository;
 
+    @Autowired
+    private MidwifeRepository midwifeRepository;
+
     /**
      * Get all MOH offices in a specific district
      * 
      * @param district The district name
      * @return List of MOH offices in the specified district as DTOs
      */
-    @GetMapping("/by-district/{district}")
+    @GetMapping("/moh-offices/by-district/{district}")
     public ResponseEntity<?> getMOHOfficesByDistrict(@PathVariable String district) {
         try {
             logger.info("Fetching MOH offices for district: {}", district);
@@ -60,28 +67,12 @@ public class DistrictMOHOfficeController {
         }
     }
 
-    /**
-     * Get all MOH offices (potentially for admin purposes or for a district selector)
-     * 
-     * @return List of all MOH offices as DTOs
-     */
-    @GetMapping
-    public ResponseEntity<?> getAllMOHOffices() {
-        try {
-            logger.info("Fetching all MOH offices");
-            List<MOHOffice> offices = mohOfficeRepository.findAll();
-            
-            // Convert entities to DTOs
-            List<MOHOfficeDto> officeDtos = offices.stream()
-                .map(MOHOfficeDto::fromEntity)
-                .collect(Collectors.toList());
-                
-            return ResponseEntity.ok(officeDtos);
-        } catch (Exception e) {
-            logger.error("Error fetching all MOH offices", e);
-            return ResponseEntity.status(500).body(Map.of(
-                "error", "Failed to retrieve MOH offices: " + e.getMessage()
-            ));
-        }
+   
+
+    @GetMapping("/midwives/{officeId}")
+    public ResponseEntity<List<MidwifeBasicDTO>> getMidwivesByOffice(Authentication authentication, @PathVariable String officeId) {
+
+        List<MidwifeBasicDTO> midwives = midwifeRepository.findBasicDetailsByOfficeId(officeId);
+        return ResponseEntity.ok(midwives);
     }
 }

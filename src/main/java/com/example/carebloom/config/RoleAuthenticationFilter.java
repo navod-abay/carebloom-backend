@@ -70,7 +70,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
                 if (path.startsWith("/api/v1/admin/")) {
                     authenticateAdmin(firebaseUid);
                 } 
-                else if (path.startsWith("/api/v1/mother/")) {
+                else if (path.startsWith("/api/v1/mothers/")) {
                     authenticateMother(firebaseUid);
                 } 
                 else if (path.startsWith("/api/v1/midwife/")) {
