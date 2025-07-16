@@ -2,7 +2,9 @@ package com.example.carebloom.controllers.moh;
 
 import com.example.carebloom.models.Clinic;
 import com.example.carebloom.services.moh.MoHClinicService;
+import com.example.carebloom.services.queue.QueueService;
 import com.example.carebloom.dto.CreateClinicResponse;
+import com.example.carebloom.dto.queue.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,9 @@ public class MoHClinicController {
 
     @Autowired
     private MoHClinicService clinicService;
+
+    @Autowired
+    private QueueService queueService;
 
     /**
      * Get all clinics for the current user's MoH office.
@@ -145,5 +150,126 @@ public class MoHClinicController {
         }
     }
 
-    
+    // ===== QUEUE MANAGEMENT ENDPOINTS =====
+
+    /**
+     * Start queue for a clinic
+     */
+    @PostMapping("/clinics/{clinicId}/queue/start")
+    public ResponseEntity<?> startQueue(@PathVariable String clinicId, 
+                                       @RequestBody StartQueueRequest request) {
+        try {
+            QueueResponse response = queueService.startQueue(clinicId, request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            logger.error("Error starting queue for clinic: {}", clinicId, e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to start queue: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Add users to queue
+     */
+    @PostMapping("/clinics/{clinicId}/queue/add-users")
+    public ResponseEntity<?> addUsersToQueue(@PathVariable String clinicId, 
+                                            @RequestBody AddUsersToQueueRequest request) {
+        try {
+            QueueResponse response = queueService.addUsersToQueue(clinicId, request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error adding users to queue for clinic: {}", clinicId, e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to add users to queue: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Complete current appointment
+     */
+    @PostMapping("/clinics/{clinicId}/queue/complete")
+    public ResponseEntity<?> completeAppointment(@PathVariable String clinicId) {
+        try {
+            QueueResponse response = queueService.completeAppointment(clinicId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error completing appointment for clinic: {}", clinicId, e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to complete appointment: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Close queue
+     */
+    @PostMapping("/clinics/{clinicId}/queue/close")
+    public ResponseEntity<?> closeQueue(@PathVariable String clinicId) {
+        try {
+            QueueResponse response = queueService.closeQueue(clinicId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error closing queue for clinic: {}", clinicId, e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to close queue: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Get queue status
+     */
+    @GetMapping("/clinics/{clinicId}/queue")
+    public ResponseEntity<?> getQueueStatus(@PathVariable String clinicId) {
+        try {
+            QueueResponse response = queueService.getQueueStatus(clinicId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error getting queue status for clinic: {}", clinicId, e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to get queue status: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Get queue statistics
+     */
+    @GetMapping("/clinics/{clinicId}/queue/statistics")
+    public ResponseEntity<?> getQueueStatistics(@PathVariable String clinicId) {
+        try {
+            QueueResponse response = queueService.getQueueStatus(clinicId);
+            if (response.isSuccess() && response.getData() instanceof QueueStatusDto) {
+                QueueStatusDto statusDto = (QueueStatusDto) response.getData();
+                
+                Map<String, Object> statistics = new HashMap<>();
+                statistics.put("completedAppointments", statusDto.getCompletedCount());
+                statistics.put("currentQueueLength", statusDto.getStatistics().getQueueLength());
+                statistics.put("averageWaitTime", statusDto.getStatistics().getAvgWaitTime());
+                statistics.put("queueStatus", statusDto.getStatus());
+                
+                // Calculate estimated completion time
+                int totalRemainingTime = statusDto.getStatistics().getQueueLength() * statusDto.getSettings().getAvgAppointmentTime();
+                String estimatedCompletionTime = java.time.LocalDateTime.now()
+                    .plusMinutes(totalRemainingTime)
+                    .format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                statistics.put("estimatedCompletionTime", estimatedCompletionTime);
+                
+                Map<String, Object> statsResponse = new HashMap<>();
+                statsResponse.put("success", true);
+                statsResponse.put("data", statistics);
+                
+                return ResponseEntity.ok(statsResponse);
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            }
+        } catch (Exception e) {
+            logger.error("Error getting queue statistics for clinic: {}", clinicId, e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to get queue statistics: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
 }
