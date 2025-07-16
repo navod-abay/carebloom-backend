@@ -1,10 +1,13 @@
 package com.example.carebloom.services.moh;
 
 import com.example.carebloom.models.Clinic;
+import com.example.carebloom.models.Mother;
 import com.example.carebloom.models.MoHOfficeUser;
 import com.example.carebloom.repositories.ClinicRepository;
+import com.example.carebloom.repositories.MotherRepository;
 import com.example.carebloom.repositories.MoHOfficeUserRepository;
 import com.example.carebloom.dto.CreateClinicResponse;
+import com.example.carebloom.dto.moh.ClinicWithMothersDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,8 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @Service
 public class MoHClinicService {
@@ -27,6 +32,9 @@ public class MoHClinicService {
     @Autowired
     private MoHOfficeUserRepository mohOfficeUserRepository;
 
+    @Autowired
+    private MotherRepository motherRepository;
+
     /**
      * Get all clinics for the current user's MoH office
      */
@@ -37,6 +45,42 @@ public class MoHClinicService {
             return Collections.emptyList();
         }
         return clinicRepository.findByMohOfficeIdAndIsActiveTrue(mohOfficeId);
+    }
+
+    /**
+     * Get all clinics for the current user's MoH office with populated mother details
+     */
+    public List<ClinicWithMothersDto> getAllClinicsByMohOfficeWithMothers() {
+        String mohOfficeId = getCurrentUserMohOfficeId();
+        if (mohOfficeId == null) {
+            logger.error("Failed to get MoH office ID for current user");
+            return Collections.emptyList();
+        }
+        
+        List<Clinic> clinics = clinicRepository.findByMohOfficeIdAndIsActiveTrue(mohOfficeId);
+        
+        return clinics.stream()
+                .map(this::populateClinicWithMothers)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method to populate a clinic with mother details
+     */
+    private ClinicWithMothersDto populateClinicWithMothers(Clinic clinic) {
+        List<Mother> mothers = new ArrayList<>();
+        
+        if (clinic.getRegisteredMotherIds() != null && !clinic.getRegisteredMotherIds().isEmpty()) {
+            try {
+                // Fetch mothers by their IDs
+                mothers = motherRepository.findAllById(clinic.getRegisteredMotherIds());
+                logger.debug("Found {} mothers for clinic {}", mothers.size(), clinic.getId());
+            } catch (Exception e) {
+                logger.error("Error fetching mothers for clinic {}: {}", clinic.getId(), e.getMessage());
+            }
+        }
+        
+        return ClinicWithMothersDto.fromClinicWithMothers(clinic, mothers);
     }
 
     public List<Clinic> getClinicsByDate(String date) {
@@ -61,6 +105,52 @@ public class MoHClinicService {
         } else {
             logger.warn("User attempted to access clinic from another MoH office: {}", id);
             return Optional.empty();
+        }
+    }
+
+    /**
+     * Get a clinic by ID with populated mother details
+     */
+    public Optional<ClinicWithMothersDto> getClinicByIdWithMothers(String id) {
+        Optional<Clinic> clinicOpt = clinicRepository.findById(id);
+        if (!clinicOpt.isPresent()) {
+            return Optional.empty();
+        }
+
+        String mohOfficeId = getCurrentUserMohOfficeId();
+        if (mohOfficeId == null) {
+            logger.error("Failed to get MoH office ID for current user");
+            return Optional.empty();
+        }
+
+        Clinic clinic = clinicOpt.get();
+        if (clinic.getMohOfficeId().equals(mohOfficeId)) {
+            return Optional.of(populateClinicWithMothers(clinic));
+        } else {
+            logger.warn("User attempted to access clinic from another MoH office: {}", id);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Get available mothers for clinic appointments
+     * Fetches all registered mothers in the current user's MoH office
+     */
+    public List<Mother> getAvailableMothersForClinic() {
+        String mohOfficeId = getCurrentUserMohOfficeId();
+        if (mohOfficeId == null) {
+            logger.error("Failed to get MoH office ID for current user");
+            return Collections.emptyList();
+        }
+        
+        try {
+            List<Mother> mothers = motherRepository.findByMohOfficeId(mohOfficeId);
+            logger.info("Found {} available mothers for clinic appointments in MoH office: {}", 
+                       mothers.size(), mohOfficeId);
+            return mothers;
+        } catch (Exception e) {
+            logger.error("Error fetching available mothers for MoH office: {}", mohOfficeId, e);
+            return Collections.emptyList();
         }
     }
 
