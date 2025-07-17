@@ -2,7 +2,9 @@ package com.example.carebloom.controllers.moh;
 
 import com.example.carebloom.models.UserProfile;
 import com.example.carebloom.models.MoHOfficeUser;
+import com.example.carebloom.models.MOHOffice;
 import com.example.carebloom.repositories.MoHOfficeUserRepository;
+import com.example.carebloom.repositories.MOHOfficeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,6 +22,9 @@ public class MoHAuthController {
 
     @Autowired
     private MoHOfficeUserRepository mohOfficeUserRepository;
+    
+    @Autowired
+    private MOHOfficeRepository mohOfficeRepository;
     
 
 
@@ -51,6 +56,22 @@ public class MoHAuthController {
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
             profile.setOfficeId(mohUser.getOfficeId()); // Include office ID
+            
+            // Get the divisional secretariat and district from MOH office
+            try {
+                MOHOffice mohOffice = mohOfficeRepository.findByid(mohUser.getOfficeId());
+                if (mohOffice != null) {
+                    profile.setDivisionalSecretariat(mohOffice.getDivisionalSecretariat());
+                    profile.setDistrict(mohOffice.getDistrict());
+                } else {
+                    profile.setDivisionalSecretariat("");
+                    profile.setDistrict("");
+                }
+            } catch (Exception e) {
+                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(), e.getMessage());
+                profile.setDivisionalSecretariat("");
+                profile.setDistrict("");
+            }
             
             // Return the profile with officeId
             return ResponseEntity.ok().body(Map.of(
@@ -92,6 +113,22 @@ public class MoHAuthController {
             profile.setRole(mohUser.getRole());
             profile.setOfficeId(mohUser.getOfficeId()); // Include office ID
             
+            // Get the divisional secretariat and district from MOH office
+            try {
+                MOHOffice mohOffice = mohOfficeRepository.findByid(mohUser.getOfficeId());
+                if (mohOffice != null) {
+                    profile.setDivisionalSecretariat(mohOffice.getDivisionalSecretariat());
+                    profile.setDistrict(mohOffice.getDistrict());
+                } else {
+                    profile.setDivisionalSecretariat("");
+                    profile.setDistrict("");
+                }
+            } catch (Exception e) {
+                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(), e.getMessage());
+                profile.setDivisionalSecretariat("");
+                profile.setDistrict("");
+            }
+            
             // Return the profile with officeId
             return ResponseEntity.ok().body(Map.of(
                 "profile", profile,
@@ -125,6 +162,22 @@ public class MoHAuthController {
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
+            
+            // Get the divisional secretariat and district from MOH office
+            try {
+                MOHOffice mohOffice = mohOfficeRepository.findByid(mohUser.getOfficeId());
+                if (mohOffice != null) {
+                    profile.setDivisionalSecretariat(mohOffice.getDivisionalSecretariat());
+                    profile.setDistrict(mohOffice.getDistrict());
+                } else {
+                    profile.setDivisionalSecretariat("");
+                    profile.setDistrict("");
+                }
+            } catch (Exception e) {
+                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(), e.getMessage());
+                profile.setDivisionalSecretariat("");
+                profile.setDistrict("");
+            }
             
             // Determine admin status and active status
             boolean isAdmin = "admin".equals(mohUser.getAccountType());
@@ -163,6 +216,22 @@ public class MoHAuthController {
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
+            
+            // Get the divisional secretariat and district from MOH office
+            try {
+                MOHOffice mohOffice = mohOfficeRepository.findByid(mohUser.getOfficeId());
+                if (mohOffice != null) {
+                    profile.setDivisionalSecretariat(mohOffice.getDivisionalSecretariat());
+                    profile.setDistrict(mohOffice.getDistrict());
+                } else {
+                    profile.setDivisionalSecretariat("");
+                    profile.setDistrict("");
+                }
+            } catch (Exception e) {
+                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(), e.getMessage());
+                profile.setDivisionalSecretariat("");
+                profile.setDistrict("");
+            }
             
             // Return the profile with officeId
             return ResponseEntity.ok().body(Map.of(

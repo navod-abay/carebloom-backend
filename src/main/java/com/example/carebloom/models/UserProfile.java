@@ -10,4 +10,6 @@ public class UserProfile {
     private String role;
     private String officeId; // MoH office ID for office users
     private String registrationStatus; // 'initial', 'location_pending', 'personal_pending', 'complete'
+    private String divisionalSecretariat; // Divisional secretariat from MOH office
+    private String district; // District from MOH office
 }
