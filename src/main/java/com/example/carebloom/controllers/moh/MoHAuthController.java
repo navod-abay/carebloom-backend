@@ -22,11 +22,9 @@ public class MoHAuthController {
 
     @Autowired
     private MoHOfficeUserRepository mohOfficeUserRepository;
-    
+
     @Autowired
     private MOHOfficeRepository mohOfficeRepository;
-    
-
 
     /**
      * Verify token and get user profile
@@ -37,18 +35,19 @@ public class MoHAuthController {
         try {
             // Extract the Firebase UID from the token
             String token = idToken.replace("Bearer ", "");
-            com.google.firebase.auth.FirebaseToken decodedToken = com.google.firebase.auth.FirebaseAuth.getInstance().verifyIdToken(token);
+            com.google.firebase.auth.FirebaseToken decodedToken = com.google.firebase.auth.FirebaseAuth.getInstance()
+                    .verifyIdToken(token);
             String firebaseUid = decodedToken.getUid();
             logger.debug("Verified token for UID: {}", firebaseUid);
-            
+
             // Find the MoH user by Firebase UID
             MoHOfficeUser mohUser = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
-            
+
             if (mohUser == null) {
                 logger.error("No MoH user found for authenticated Firebase UID: {}", firebaseUid);
                 return ResponseEntity.status(401).body("Unauthorized: User not found");
             }
-            
+
             // Create and return user profile
             UserProfile profile = new UserProfile();
             profile.setId(mohUser.getId());
@@ -56,7 +55,7 @@ public class MoHAuthController {
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
             profile.setOfficeId(mohUser.getOfficeId()); // Include office ID
-            
+
             // Get the divisional secretariat and district from MOH office
             try {
                 MOHOffice mohOffice = mohOfficeRepository.findByid(mohUser.getOfficeId());
@@ -68,16 +67,16 @@ public class MoHAuthController {
                     profile.setDistrict("");
                 }
             } catch (Exception e) {
-                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(), e.getMessage());
+                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(),
+                        e.getMessage());
                 profile.setDivisionalSecretariat("");
                 profile.setDistrict("");
             }
-            
+
             // Return the profile with officeId
             return ResponseEntity.ok().body(Map.of(
-                "profile", profile,
-                "officeId", mohUser.getOfficeId()
-            ));
+                    "profile", profile,
+                    "officeId", mohUser.getOfficeId()));
         } catch (Exception e) {
             logger.error("Error retrieving profile: {}", e.getMessage());
             return ResponseEntity.status(401).body(e.getMessage());
@@ -92,19 +91,19 @@ public class MoHAuthController {
         try {
             String firebaseUid = authentication.getName();
             logger.debug("Signing in user from security context for UID: {}", firebaseUid);
-            
+
             MoHOfficeUser mohUser = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
-            
+
             if (mohUser == null) {
                 logger.error("No MoH user found for authenticated Firebase UID: {}", firebaseUid);
                 return ResponseEntity.status(401).body("Unauthorized: User not found");
             }
-            
+
             if (!"active".equals(mohUser.getState())) {
                 logger.error("MoH user {} is not active. Current state: {}", mohUser.getEmail(), mohUser.getState());
                 return ResponseEntity.status(403).body("Unauthorized: User account is not active");
             }
-            
+
             // Create and return user profile
             UserProfile profile = new UserProfile();
             profile.setId(mohUser.getId());
@@ -112,7 +111,7 @@ public class MoHAuthController {
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
             profile.setOfficeId(mohUser.getOfficeId()); // Include office ID
-            
+
             // Get the divisional secretariat and district from MOH office
             try {
                 MOHOffice mohOffice = mohOfficeRepository.findByid(mohUser.getOfficeId());
@@ -124,16 +123,16 @@ public class MoHAuthController {
                     profile.setDistrict("");
                 }
             } catch (Exception e) {
-                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(), e.getMessage());
+                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(),
+                        e.getMessage());
                 profile.setDivisionalSecretariat("");
                 profile.setDistrict("");
             }
-            
+
             // Return the profile with officeId
             return ResponseEntity.ok().body(Map.of(
-                "profile", profile,
-                "officeId", mohUser.getOfficeId()
-            ));
+                    "profile", profile,
+                    "officeId", mohUser.getOfficeId()));
         } catch (Exception e) {
             logger.error("Error signing in: {}", e.getMessage());
             return ResponseEntity.status(401).body(e.getMessage());
@@ -148,21 +147,21 @@ public class MoHAuthController {
         try {
             String firebaseUid = authentication.getName();
             logger.debug("Getting user role from security context for UID: {}", firebaseUid);
-            
+
             MoHOfficeUser mohUser = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
-            
+
             if (mohUser == null) {
                 logger.error("No MoH user found for authenticated Firebase UID: {}", firebaseUid);
                 return ResponseEntity.status(401).body("Unauthorized: User not found");
             }
-            
+
             // Create user profile
             UserProfile profile = new UserProfile();
             profile.setId(mohUser.getId());
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
-            
+
             // Get the divisional secretariat and district from MOH office
             try {
                 MOHOffice mohOffice = mohOfficeRepository.findByid(mohUser.getOfficeId());
@@ -174,11 +173,12 @@ public class MoHAuthController {
                     profile.setDistrict("");
                 }
             } catch (Exception e) {
-                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(), e.getMessage());
+                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(),
+                        e.getMessage());
                 profile.setDivisionalSecretariat("");
                 profile.setDistrict("");
             }
-            
+
             // Determine admin status and active status
             boolean isAdmin = "admin".equals(mohUser.getAccountType());
             boolean isActive = "active".equals(mohUser.getState());
@@ -186,8 +186,7 @@ public class MoHAuthController {
             return ResponseEntity.ok().body(Map.of(
                     "profile", profile,
                     "isAdmin", isAdmin,
-                    "isActive", isActive
-            ));
+                    "isActive", isActive));
         } catch (Exception e) {
             logger.error("Error retrieving role: {}", e.getMessage());
             return ResponseEntity.status(401).body(e.getMessage());
@@ -202,21 +201,21 @@ public class MoHAuthController {
         try {
             String firebaseUid = authentication.getName();
             logger.debug("Getting user info from security context for UID: {}", firebaseUid);
-            
+
             MoHOfficeUser mohUser = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
-            
+
             if (mohUser == null) {
                 logger.error("No MoH user found for authenticated Firebase UID: {}", firebaseUid);
                 return ResponseEntity.status(401).body("Unauthorized: User not found");
             }
-            
+
             // Create and return user profile
             UserProfile profile = new UserProfile();
             profile.setId(mohUser.getId());
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
             profile.setRole(mohUser.getRole());
-            
+
             // Get the divisional secretariat and district from MOH office
             try {
                 MOHOffice mohOffice = mohOfficeRepository.findByid(mohUser.getOfficeId());
@@ -228,16 +227,16 @@ public class MoHAuthController {
                     profile.setDistrict("");
                 }
             } catch (Exception e) {
-                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(), e.getMessage());
+                logger.warn("Could not fetch MOH office details for office ID {}: {}", mohUser.getOfficeId(),
+                        e.getMessage());
                 profile.setDivisionalSecretariat("");
                 profile.setDistrict("");
             }
-            
+
             // Return the profile with officeId
             return ResponseEntity.ok().body(Map.of(
-                "profile", profile,
-                "officeId", mohUser.getOfficeId()
-            ));
+                    "profile", profile,
+                    "officeId", mohUser.getOfficeId()));
         } catch (Exception e) {
             logger.error("Error retrieving user info: {}", e.getMessage());
             return ResponseEntity.status(401).body(e.getMessage());
