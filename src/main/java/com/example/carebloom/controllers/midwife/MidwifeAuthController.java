@@ -8,15 +8,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.carebloom.dto.midwife.MidwifeMidDTO;
+import com.example.carebloom.dto.mother.MotherMidDTO;
 import com.example.carebloom.dto.unit.UnitBasicDTO;
 import com.example.carebloom.models.Unit;
 import com.example.carebloom.repositories.MidwifeRepository;
 import com.example.carebloom.repositories.UnitRepository;
+import com.example.carebloom.services.midwife.MidwifeAuthService;
 import com.example.carebloom.models.Midwife;
 
 import java.util.List;
@@ -24,7 +27,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @CrossOrigin(origins = "${app.cors.midwife-origin}")
-@RequestMapping("/api/v1/midwife/auth")
+@RequestMapping("/api/v1/midwife")
 public class MidwifeAuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(MidwifeAuthController.class);
@@ -35,7 +38,10 @@ public class MidwifeAuthController {
     @Autowired
     private UnitRepository unitRepository;
 
-    @PostMapping("/verify")
+    @Autowired
+    private MidwifeAuthService midwifeAuthService;
+
+    @PostMapping("/auth/verify")
     public ResponseEntity<?> verifyMidwife() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -90,5 +96,32 @@ public class MidwifeAuthController {
         }
     }
 
-    
+    @GetMapping("/assigned-mothers")
+    public ResponseEntity<?> getAssignedMothers() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            
+            // Check if user is authenticated
+            if (authentication == null || 
+                !authentication.isAuthenticated() || 
+                "anonymousUser".equals(authentication.getName())) {
+                logger.debug("Midwife is not authenticated or anonymous");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("User is not signed in properly");
+            }
+
+            String firebaseUid = authentication.getName();
+            logger.debug("Getting assigned mothers for midwife with Firebase UID: {}", firebaseUid);
+
+            List<MotherMidDTO> assignedMothers = midwifeAuthService.getAssignedMothers(firebaseUid);
+            
+            logger.info("Retrieved {} assigned mothers for midwife: {}", assignedMothers.size(), firebaseUid);
+            return ResponseEntity.ok(assignedMothers);
+
+        } catch (Exception e) {
+            logger.error("Error getting assigned mothers: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to get assigned mothers: " + e.getMessage());
+        }
+    }
 }
