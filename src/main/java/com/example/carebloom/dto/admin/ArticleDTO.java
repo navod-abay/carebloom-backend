@@ -10,5 +10,6 @@ public class ArticleDTO {
     private int likes;
     private String summary;
     private String content;
+    private String category;
     private String createdAt;
 }

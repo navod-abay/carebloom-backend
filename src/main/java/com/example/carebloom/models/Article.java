@@ -14,5 +14,6 @@ public class Article {
     private int likes;
     private String summary;
     private String content;
+    private String category;
     private String createdAt;
 }
