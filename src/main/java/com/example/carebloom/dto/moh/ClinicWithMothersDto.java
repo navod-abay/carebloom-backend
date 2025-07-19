@@ -29,6 +29,9 @@ public class ClinicWithMothersDto {
     // Keep original registeredMotherIds for backward compatibility
     private List<String> registeredMotherIds = new ArrayList<>();
     
+    // Unit IDs assigned to this clinic
+    private List<String> unitIds = new ArrayList<>();
+    
     // Full mother details instead of just IDs
     private List<Mother> addedMothers = new ArrayList<>();
     
@@ -53,6 +56,7 @@ public class ClinicWithMothersDto {
         dto.setMaxCapacity(clinic.getMaxCapacity());
         dto.setNotes(clinic.getNotes());
         dto.setRegisteredMotherIds(clinic.getRegisteredMotherIds());
+        dto.setUnitIds(clinic.getUnitIds());
         return dto;
     }
     

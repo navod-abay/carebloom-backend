@@ -31,4 +31,7 @@ public class Clinic {
     
     // Optional: Additional notes about the clinic
     private String notes;
+    
+    // Optional: List of unit IDs to assign this clinic to
+    private List<String> unitIds = new ArrayList<>();
 }

@@ -24,4 +24,6 @@ public class Mother {
     private String mohOfficeId; // Reference to MOHOffice table
     private String areaMidwifeId; // Reference to Midwife table
     private String recordNumber;
+
+    private String UnitId;
 }
