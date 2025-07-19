@@ -212,9 +212,9 @@ public class MoHMotherController {
      * Accept a mother's registration (change status from 'completed' to 'accepted')
      */
     @PostMapping("/mothers/{motherId}/accept")
-    public ResponseEntity<?> acceptMotherRegistration(@PathVariable String motherId) {
+    public ResponseEntity<?> acceptMotherRegistration(@RequestBody Map<String, String> request, @PathVariable String motherId) {
         try {
-            mohMotherService.acceptMotherRegistration(motherId);
+            mohMotherService.acceptMotherRegistration(request.get("UnitId"), motherId);
             return ResponseEntity.ok(Map.of("message", "Mother registration accepted"));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));

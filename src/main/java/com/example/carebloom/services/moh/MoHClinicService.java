@@ -6,7 +6,9 @@ import com.example.carebloom.models.MoHOfficeUser;
 import com.example.carebloom.repositories.ClinicRepository;
 import com.example.carebloom.repositories.MotherRepository;
 import com.example.carebloom.repositories.MoHOfficeUserRepository;
+import com.example.carebloom.dto.CreateClinicRequest;
 import com.example.carebloom.dto.CreateClinicResponse;
+import com.example.carebloom.dto.UpdateClinicRequest;
 import com.example.carebloom.dto.moh.ClinicWithMothersDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,12 +159,26 @@ public class MoHClinicService {
     /**
      * Create a new clinic for the current user's MoH office
      */
-    public CreateClinicResponse createClinic(Clinic clinic) {
+    public CreateClinicResponse createClinic(CreateClinicRequest request) {
         try {
             String mohOfficeId = getCurrentUserMohOfficeId();
             if (mohOfficeId == null) {
                 return new CreateClinicResponse(false, "Failed to determine MoH office for current user");
             }
+
+            // Convert DTO to entity
+            Clinic clinic = new Clinic();
+            clinic.setTitle(request.getTitle());
+            clinic.setDate(request.getDate());
+            clinic.setStartTime(request.getStartTime());
+            clinic.setDoctorName(request.getDoctorName());
+            clinic.setLocation(request.getLocation());
+            clinic.setRegisteredMotherIds(request.getRegisteredMotherIds() != null ? 
+                new ArrayList<>(request.getRegisteredMotherIds()) : new ArrayList<>());
+            clinic.setMaxCapacity(request.getMaxCapacity());
+            clinic.setNotes(request.getNotes());
+            clinic.setUnitIds(request.getUnitIds() != null ? 
+                new ArrayList<>(request.getUnitIds()) : new ArrayList<>());
 
             clinic.setMohOfficeId(mohOfficeId);
             clinic.setCreatedAt(LocalDateTime.now());
@@ -200,6 +216,61 @@ public class MoHClinicService {
         existingClinic.setStartTime(clinic.getStartTime());
         existingClinic.setDoctorName(clinic.getDoctorName());
         existingClinic.setLocation(clinic.getLocation());
+        existingClinic.setRegisteredMotherIds(clinic.getRegisteredMotherIds());
+        existingClinic.setMaxCapacity(clinic.getMaxCapacity());
+        existingClinic.setNotes(clinic.getNotes());
+        existingClinic.setUnitIds(clinic.getUnitIds());
+        existingClinic.setUpdatedAt(LocalDateTime.now());
+        return clinicRepository.save(existingClinic);
+    }
+
+    public Clinic updateClinic(String id, UpdateClinicRequest request) {
+        String mohOfficeId = getCurrentUserMohOfficeId();
+        if (mohOfficeId == null) {
+            logger.error("Failed to get MoH office ID for current user");
+            return null;
+        }
+
+        Optional<Clinic> existingClinicOpt = clinicRepository.findById(id);
+        if (!existingClinicOpt.isPresent()) {
+            return null;
+        }
+
+        Clinic existingClinic = existingClinicOpt.get();
+        // Verify that the clinic belongs to this MoH office
+        if (!existingClinic.getMohOfficeId().equals(mohOfficeId)) {
+            logger.warn("User attempted to update clinic from another MoH office: {}", id);
+            return null;
+        }
+
+        // Update fields from DTO
+        if (request.getTitle() != null) {
+            existingClinic.setTitle(request.getTitle());
+        }
+        if (request.getDate() != null) {
+            existingClinic.setDate(request.getDate());
+        }
+        if (request.getStartTime() != null) {
+            existingClinic.setStartTime(request.getStartTime());
+        }
+        if (request.getDoctorName() != null) {
+            existingClinic.setDoctorName(request.getDoctorName());
+        }
+        if (request.getLocation() != null) {
+            existingClinic.setLocation(request.getLocation());
+        }
+        if (request.getRegisteredMotherIds() != null) {
+            existingClinic.setRegisteredMotherIds(request.getRegisteredMotherIds());
+        }
+        if (request.getMaxCapacity() != null) {
+            existingClinic.setMaxCapacity(request.getMaxCapacity());
+        }
+        if (request.getNotes() != null) {
+            existingClinic.setNotes(request.getNotes());
+        }
+        if (request.getUnitIds() != null) {
+            existingClinic.setUnitIds(request.getUnitIds());
+        }
         existingClinic.setUpdatedAt(LocalDateTime.now());
         return clinicRepository.save(existingClinic);
     }

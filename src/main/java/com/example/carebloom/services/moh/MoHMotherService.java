@@ -17,7 +17,7 @@ public class MoHMotherService {
     @Autowired
     private MotherRepository motherRepository;
 
-    public void acceptMotherRegistration(String motherId) {
+    public void acceptMotherRegistration(String UnitId, String motherId) {
         Optional<Mother> motherOpt = motherRepository.findById(motherId);
         if (motherOpt.isEmpty()) {
             logger.error("Mother not found with ID: {}", motherId);
@@ -29,6 +29,7 @@ public class MoHMotherService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mother registration status must be 'completed' to accept");
         }
         mother.setRegistrationStatus("accepted");
+        mother.setUnitId(UnitId); 
         motherRepository.save(mother);
         logger.info("Mother {} registration accepted", motherId);
     }

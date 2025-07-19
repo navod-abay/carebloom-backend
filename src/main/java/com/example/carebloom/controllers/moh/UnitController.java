@@ -3,6 +3,7 @@ package com.example.carebloom.controllers.moh;
 import com.example.carebloom.models.Unit;
 import com.example.carebloom.repositories.UnitRepository;
 import com.example.carebloom.services.moh.UnitService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ public class UnitController {
     @Autowired
     private UnitRepository unitRepository;
 
+
     @PostMapping("/unit")
     public ResponseEntity<Unit> createUnit(
             @RequestBody Unit request
@@ -33,6 +35,7 @@ public class UnitController {
         List<Unit> units = unitRepository.findByMohOfficeId(mohOfficeId);
         return ResponseEntity.ok(units);
     }
+
 
     @PutMapping("/unit/{unitId}")
     public ResponseEntity<Unit> updateUnit(@PathVariable String unitId, @RequestBody Unit request) {

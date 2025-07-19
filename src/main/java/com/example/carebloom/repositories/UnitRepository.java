@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface UnitRepository extends MongoRepository<Unit, String> {
     List<Unit> findByMohOfficeId(String mohOfficeId);
+    List<Unit> findByAssignedMidwifeId(String assignedMidwifeId);
 }

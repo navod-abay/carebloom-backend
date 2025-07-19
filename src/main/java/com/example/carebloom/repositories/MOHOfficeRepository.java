@@ -8,4 +8,5 @@ public interface MOHOfficeRepository extends MongoRepository<MOHOffice, String> 
     MOHOffice findByadminEmail(String adminEmail);
     MOHOffice findByid(String id);
     List<MOHOffice> findByDistrict(String district);
+
 }

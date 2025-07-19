@@ -3,7 +3,9 @@ package com.example.carebloom.controllers.moh;
 import com.example.carebloom.models.Clinic;
 import com.example.carebloom.models.Mother;
 import com.example.carebloom.services.moh.MoHClinicService;
+import com.example.carebloom.dto.CreateClinicRequest;
 import com.example.carebloom.dto.CreateClinicResponse;
+import com.example.carebloom.dto.UpdateClinicRequest;
 import com.example.carebloom.dto.moh.AvailableMothersResponse;
 import com.example.carebloom.dto.moh.ClinicWithMothersDto;
 import org.slf4j.Logger;
@@ -111,9 +113,9 @@ public class MoHClinicController {
      * Create a new clinic for the current user's MoH office
      */
     @PostMapping("/clinics")
-    public ResponseEntity<CreateClinicResponse> createClinic(@RequestBody Clinic clinic) {
+    public ResponseEntity<CreateClinicResponse> createClinic(@RequestBody CreateClinicRequest request) {
         try {
-            CreateClinicResponse response = clinicService.createClinic(clinic);
+            CreateClinicResponse response = clinicService.createClinic(request);
             if (response.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.CREATED).body(response);
             } else {
@@ -131,9 +133,9 @@ public class MoHClinicController {
      * Update a clinic, ensuring it belongs to the current user's MoH office
      */
     @PutMapping("/clinics/{id}")
-    public ResponseEntity<?> updateClinic(@PathVariable String id, @RequestBody Clinic clinic) {
+    public ResponseEntity<?> updateClinic(@PathVariable String id, @RequestBody UpdateClinicRequest request) {
         try {
-            Clinic updatedClinic = clinicService.updateClinic(id, clinic);
+            Clinic updatedClinic = clinicService.updateClinic(id, request);
             if (updatedClinic != null) {
                 return ResponseEntity.ok(updatedClinic);
             } else {
