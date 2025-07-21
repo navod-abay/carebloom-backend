@@ -20,6 +20,8 @@ public class Workshop {
     private String venue; // Location/venue name
     private String description; // Workshop description
     private String category; // Workshop category
+    private Integer capacity; // Maximum number of participants
+    private Integer enrolled = 0; // Current number of enrolled participants
     private boolean isActive = true;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
