@@ -108,16 +108,13 @@ public class MoHOfficeUserService {
         }
         
         try {
-            // Create Firebase user account
-            UserRecord firebaseUser = firebaseUserService.createFirebaseUser(user.getEmail());
             
             // Update user state to approved/active
-            user.setFirebaseUid(firebaseUser.getUid());
             user.setState("active");
             user.setUpdatedAt(LocalDateTime.now());
             
             logger.info("Successfully approved user {} and created Firebase account with UID: {}", 
-                user.getEmail(), firebaseUser.getUid());
+                user.getEmail(), user.getFirebaseUid());
             
             return mohOfficeUserRepository.save(user);
             
