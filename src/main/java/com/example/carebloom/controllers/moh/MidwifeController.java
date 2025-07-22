@@ -83,6 +83,15 @@ public class MidwifeController {
         return ResponseEntity.ok(dto);
     }
 
+    @PostMapping("/midwife/{midwifeId}/grant-access")
+    public ResponseEntity<Void> grantAccessToMidwife(
+            @PathVariable String midwifeId,
+            Authentication authentication) {
+
+        midwifeService.grantAccessToMidwife(midwifeId);
+        return ResponseEntity.noContent().build();
+    }
+
     private String getUserOfficeId(String firebaseUid) {
         MoHOfficeUser user = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
         if (user == null) {
