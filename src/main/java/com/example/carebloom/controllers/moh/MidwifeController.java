@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/moh")
@@ -35,7 +36,6 @@ public class MidwifeController {
     public ResponseEntity<List<MidwifeBasicDTO>> getMidwivesByOffice(Authentication authentication) {
 
         String officeId = getUserOfficeId(authentication.getName());
-
 
         List<MidwifeBasicDTO> midwives = midwifeRepository.findBasicDetailsByOfficeId(officeId);
         return ResponseEntity.ok(midwives);
@@ -81,6 +81,31 @@ public class MidwifeController {
         String firebaseUid = authentication.getName();
         MidwifeExtendedDTO dto = midwifeService.getMidwifeExtendedDetails(midwifeId, firebaseUid);
         return ResponseEntity.ok(dto);
+    }
+
+    @PutMapping("midwife/{midwifeId}/suspend")
+    public ResponseEntity<?> suspendMidwife(
+            @PathVariable String midwifeId) {
+        Optional<Midwife> optionalMidwife = midwifeRepository.findById(midwifeId);
+        if (optionalMidwife.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Midwife midwife = optionalMidwife.get();
+        midwife.setState("suspended");
+        midwifeRepository.save(midwife);
+        return ResponseEntity.ok().body("Midwife suspended successfully");
+    }
+
+    @PutMapping("midwife/{midwifeId}/reinstate")
+    public ResponseEntity<?> reinstateMidwife(
+            @PathVariable String midwifeId) {
+        Optional<Midwife> optionalMidwife = midwifeRepository.findById(midwifeId);
+        if (optionalMidwife.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Midwife updatedMidwife = midwifeService.reinstateMidwife(midwifeId);
+        return ResponseEntity.ok(updatedMidwife);
     }
 
     private String getUserOfficeId(String firebaseUid) {

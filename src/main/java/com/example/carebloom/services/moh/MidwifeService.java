@@ -121,6 +121,25 @@ public class MidwifeService {
         return midwifeRepository.save(midwife);
     }
 
+    // Reinstate a suspended midwife
+    public Midwife reinstateMidwife(String midwifeId) {
+        Optional<Midwife> midwifeOpt = midwifeRepository.findById(midwifeId);
+        if (!midwifeOpt.isPresent()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Midwife not found with ID: " + midwifeId);
+        }
+
+        Midwife midwife = midwifeOpt.get();
+
+        if (!"suspended".equals(midwife.getState())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Midwife is not suspended");
+        }
+
+        midwife.setState("active");
+        midwife.setUpdatedAt(LocalDateTime.now());
+
+        return midwifeRepository.save(midwife);
+    }
+
     /**
      * Update an existing midwife
      */
@@ -201,21 +220,23 @@ public class MidwifeService {
         dto.setPhone(midwife.getPhone());
         dto.setEmail(midwife.getEmail());
         dto.setAssignedUnitIds(midwife.getAssignedUnitIds());
+        dto.setState(midwife.getState());
 
         // Map assigned mothers
         if (midwife.getAssignedMotherIds() != null && !midwife.getAssignedMotherIds().isEmpty()) {
             List<MotherBasicDTO> assignedMothers = midwife.getAssignedMotherIds().stream()
-                .map(motherId -> {
-                    Mother mother = motherRepository.findById(motherId).orElse(null);
-                    if (mother == null) return null;
-                    MotherBasicDTO mDto = new MotherBasicDTO();
-                    mDto.setName(mother.getName());
-                    mDto.setDueDate(mother.getDueDate());
-                    mDto.setPhone(mother.getPhone());
-                    return mDto;
-                })
-                .filter(m -> m != null)
-                .toList();
+                    .map(motherId -> {
+                        Mother mother = motherRepository.findById(motherId).orElse(null);
+                        if (mother == null)
+                            return null;
+                        MotherBasicDTO mDto = new MotherBasicDTO();
+                        mDto.setName(mother.getName());
+                        mDto.setDueDate(mother.getDueDate());
+                        mDto.setPhone(mother.getPhone());
+                        return mDto;
+                    })
+                    .filter(m -> m != null)
+                    .toList();
             dto.setAssignedMothers(assignedMothers);
         }
 

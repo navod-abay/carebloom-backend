@@ -22,7 +22,7 @@ public class MidwifeAuthController {
     private static final Logger logger = LoggerFactory.getLogger(MidwifeAuthController.class);
 
     @Autowired
-    private  MidwifeRepository midwifeRepository;
+    private MidwifeRepository midwifeRepository;
 
     @PostMapping("/verify")
     public ResponseEntity<?> verifyToken(@RequestHeader("Authorization") String idToken) {
