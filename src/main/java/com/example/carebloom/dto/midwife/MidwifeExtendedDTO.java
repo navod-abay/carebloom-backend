@@ -5,7 +5,6 @@ import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class MidwifeExtendedDTO extends MidwifeBasicDTO {
@@ -14,4 +13,5 @@ public class MidwifeExtendedDTO extends MidwifeBasicDTO {
 
     // List of assigned unit IDs
     private List<String> assignedUnitIds;
+    private String state;
 }
