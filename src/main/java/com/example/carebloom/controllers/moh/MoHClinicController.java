@@ -1,8 +1,13 @@
 package com.example.carebloom.controllers.moh;
 
 import com.example.carebloom.models.Clinic;
+import com.example.carebloom.models.Mother;
 import com.example.carebloom.services.moh.MoHClinicService;
+import com.example.carebloom.dto.CreateClinicRequest;
 import com.example.carebloom.dto.CreateClinicResponse;
+import com.example.carebloom.dto.UpdateClinicRequest;
+import com.example.carebloom.dto.moh.AvailableMothersResponse;
+import com.example.carebloom.dto.moh.ClinicWithMothersDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +36,7 @@ public class MoHClinicController {
     @GetMapping("/clinics")
     public ResponseEntity<?> getAllClinicsByMohOffice() {
         try {
-            List<Clinic> clinics = clinicService.getAllClinicsByMohOffice();
+            List<ClinicWithMothersDto> clinics = clinicService.getAllClinicsByMohOfficeWithMothers();
             return ResponseEntity.ok(clinics);
         } catch (Exception e) {
             logger.error("Error getting clinics", e);
@@ -65,7 +70,7 @@ public class MoHClinicController {
     @GetMapping("/clinics/{id}")
     public ResponseEntity<?> getClinicById(@PathVariable String id) {
         try {
-            Optional<Clinic> clinic = clinicService.getClinicById(id);
+            Optional<ClinicWithMothersDto> clinic = clinicService.getClinicByIdWithMothers(id);
             if (clinic.isPresent()) {
                 return ResponseEntity.ok(clinic.get());
             } else {
@@ -82,12 +87,35 @@ public class MoHClinicController {
     }
 
     /**
+     * Get available mothers for clinic appointments
+     * This endpoint fetches all registered mothers in the current user's MoH office
+     * for use when creating new clinic appointments
+     */
+    @GetMapping("/clinics/available-mothers")
+    public ResponseEntity<?> getAvailableMothersForClinic() {
+        try {
+            List<Mother> availableMothers = clinicService.getAvailableMothersForClinic();
+            
+            if (availableMothers.isEmpty()) {
+                return ResponseEntity.ok(AvailableMothersResponse.empty());
+            }
+            
+            return ResponseEntity.ok(AvailableMothersResponse.success(availableMothers));
+        } catch (Exception e) {
+            logger.error("Error fetching available mothers for clinic", e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch available mothers: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
      * Create a new clinic for the current user's MoH office
      */
     @PostMapping("/clinics")
-    public ResponseEntity<CreateClinicResponse> createClinic(@RequestBody Clinic clinic) {
+    public ResponseEntity<CreateClinicResponse> createClinic(@RequestBody CreateClinicRequest request) {
         try {
-            CreateClinicResponse response = clinicService.createClinic(clinic);
+            CreateClinicResponse response = clinicService.createClinic(request);
             if (response.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.CREATED).body(response);
             } else {
@@ -105,9 +133,9 @@ public class MoHClinicController {
      * Update a clinic, ensuring it belongs to the current user's MoH office
      */
     @PutMapping("/clinics/{id}")
-    public ResponseEntity<?> updateClinic(@PathVariable String id, @RequestBody Clinic clinic) {
+    public ResponseEntity<?> updateClinic(@PathVariable String id, @RequestBody UpdateClinicRequest request) {
         try {
-            Clinic updatedClinic = clinicService.updateClinic(id, clinic);
+            Clinic updatedClinic = clinicService.updateClinic(id, request);
             if (updatedClinic != null) {
                 return ResponseEntity.ok(updatedClinic);
             } else {

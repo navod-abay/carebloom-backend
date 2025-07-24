@@ -4,6 +4,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 @Data
 @Document(collection = "clinics")
@@ -20,4 +22,16 @@ public class Clinic {
     private boolean isActive = true;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // Optional: List of registered mother IDs assigned to this clinic
+    private List<String> registeredMotherIds = new ArrayList<>();
+    
+    // Optional: Maximum number of mothers that can be assigned to this clinic
+    private Integer maxCapacity;
+    
+    // Optional: Additional notes about the clinic
+    private String notes;
+    
+    // Optional: List of unit IDs to assign this clinic to
+    private List<String> unitIds = new ArrayList<>();
 }

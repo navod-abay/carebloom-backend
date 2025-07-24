@@ -8,4 +8,6 @@ public interface MotherRepository extends MongoRepository<Mother, String> {
     Mother findByFirebaseUid(String firebaseUid);
     List<Mother> findByMohOfficeId(String mohOfficeId); // Find mothers by MOH Office ID
     List<Mother> findByDistrict(String district); // Find mothers by district
+    List<Mother> findByAreaMidwifeId(String areaMidwifeId); // Find mothers assigned to a specific midwife
+    List<Mother> findByUnitId(String UnitId);
 }

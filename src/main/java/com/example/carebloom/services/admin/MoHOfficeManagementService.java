@@ -36,13 +36,7 @@ public class MoHOfficeManagementService {
         MOHOffice office = new MOHOffice();
         office.setDivisionalSecretariat(request.getDivisionalSecretariat());
         office.setDistrict(request.getDistrict()); // Add district field
-        office.setAddress(request.getAddress());
-        
-        MOHOffice.Location location = new MOHOffice.Location();
-        location.setLatitude(request.getLocation().getLatitude());
-        location.setLongitude(request.getLocation().getLongitude());
-        office.setLocation(location);
-        
+        office.setAddress(request.getAddress());        
         office.setOfficerInCharge(request.getOfficerInCharge());
         office.setContactNumber(request.getContactNumber());
         office.setAdminEmail(request.getAdminEmail());

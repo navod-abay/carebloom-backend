@@ -203,6 +203,23 @@ public class MidwifeService {
         midwifeRepository.delete(midwife);
     }
 
+    public void grantAccessToMidwife(String midwifeId) {
+        Midwife midwife = midwifeRepository.findById(midwifeId).orElse(null);
+
+        if (midwife == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Midwife not found");
+        }
+        MoHOfficeUser user = new MoHOfficeUser();
+        user.setOfficeId(midwife.getOfficeId());
+        user.setEmail(midwife.getEmail());
+        user.setName(midwife.getName());
+        user.setFirebaseUid(midwife.getFirebaseUid());
+        user.setAccountType("normal"); // Default account type
+        user.setRole("MOH_OFFICE_USER");
+        user.setState("pending");
+        mohOfficeUserRepository.save(user);
+    }
+
     /**
      * Get extended midwife details
      */

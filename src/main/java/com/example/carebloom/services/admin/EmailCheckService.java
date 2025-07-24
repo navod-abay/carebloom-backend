@@ -31,18 +31,21 @@ public class EmailCheckService {
             logger.debug("Email {} exists in Firebase Auth", userRecords.getEmail());
             return true;
         } catch (Exception e) {
-            // FirebaseAuthException with USER_NOT_FOUND code means the email doesn't exist
-            if (e.getCause() instanceof FirebaseAuthException) {
-                FirebaseAuthException authException = (FirebaseAuthException) e.getCause();
-                if ("user-not-found".equals(authException.getErrorCode())) {
-                    logger.debug("Email {} does not exist in Firebase Auth", email);
-                    return false;
+            Throwable cause = e;
+            // Unwrap causes to find FirebaseAuthException
+            while (cause != null) {
+                if (cause instanceof FirebaseAuthException) {
+                    FirebaseAuthException authException = (FirebaseAuthException) cause;
+                    if ("user-not-found".equals(authException.getErrorCode())) {
+                        logger.debug("Email {} does not exist in Firebase Auth", email);
+                        return false;
+                    }
                 }
+                cause = cause.getCause();
             }
-
-            // For other exceptions, log but don't expose error details
+            // For other exceptions, log and return false
             logger.error("Error checking email in Firebase: {}", e.getMessage());
-            throw new RuntimeException("Error checking email in Firebase authentication");
+            return false;
         }
     }
 }
