@@ -12,15 +12,8 @@ public class MOHOffice {
     private String divisionalSecretariat;
     private String district;  // Added district field
     private String address;
-    private Location location;
     private String officerInCharge;
     private String contactNumber;
     private String adminEmail;
     private String role = "MOH_OFFICE";
-
-    @Data
-    public static class Location {
-        private double latitude;
-        private double longitude;
-    }
 }
