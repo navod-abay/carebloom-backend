@@ -25,5 +25,17 @@ public class Mother {
     private String areaMidwifeId; // Reference to Midwife table
     private String recordNumber;
 
-    private String UnitId;
+    private String unitId;
+    
+    // Field visit appointment details
+    private FieldVisitAppointment fieldVisitAppointment;
+    
+    @Data
+    public static class FieldVisitAppointment {
+        private String visitId; // Reference to FieldVisit ID
+        private String date; // ISO date string (YYYY-MM-DD)
+        private String startTime; // HH:MM format
+        private String endTime; // HH:MM format
+        private String status; // "new", "confirmed", "ongoing", "completed", "rescheduled"
+    }
 }

@@ -9,4 +9,5 @@ import java.util.List;
 public interface UnitRepository extends MongoRepository<Unit, String> {
     List<Unit> findByMohOfficeId(String mohOfficeId);
     List<Unit> findByAssignedMidwifeId(String assignedMidwifeId);
+    
 }

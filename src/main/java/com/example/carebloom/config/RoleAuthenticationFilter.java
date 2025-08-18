@@ -13,7 +13,6 @@ import com.example.carebloom.models.MoHOfficeUser;
 import com.example.carebloom.models.Midwife;
 import com.example.carebloom.models.Vendor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -97,7 +96,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
     private void authenticateAdmin(String firebaseUid) {
         PlatformAdmin admin = platformAdminRepository.findByFirebaseUid(firebaseUid);
         if (admin != null) {
-            setAuthentication(firebaseUid, "PLATFORM_MANAGER");
+            setAuthentication(firebaseUid, "PLATFORM_MANAGER", admin.getId(), admin);
             logger.info("Authenticated admin: {}", firebaseUid);
         } else {
             logger.warn("User {} attempted to access admin resources but was not found", firebaseUid);
@@ -110,7 +109,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
     private void authenticateMother(String firebaseUid) {
         Mother mother = motherRepository.findByFirebaseUid(firebaseUid);
         if (mother != null) {
-            setAuthentication(firebaseUid, "MOTHER");
+            setAuthentication(firebaseUid, "MOTHER", mother.getId(), mother);
             logger.info("Authenticated mother: {}", firebaseUid);
         } else {
             logger.warn("User {} attempted to access mother resources but was not found", firebaseUid);
@@ -123,7 +122,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
     private void authenticateMidwife(String firebaseUid) {
         Midwife midwife = midwifeRepository.findByFirebaseUid(firebaseUid);
         if (midwife != null) {
-            setAuthentication(firebaseUid, "MIDWIFE");
+            setAuthentication(firebaseUid, "MIDWIFE", midwife.getId(), midwife);
             logger.info("Authenticated midwife: {}", firebaseUid);
         } else {
             logger.warn("User {} attempted to access midwife resources but was not found", firebaseUid);
@@ -136,7 +135,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
     private void authenticateVendor(String firebaseUid) {
         Vendor vendor = vendorRepository.findByFirebaseUid(firebaseUid);
         if (vendor != null) {
-            setAuthentication(firebaseUid, "VENDOR");
+            setAuthentication(firebaseUid, "VENDOR", vendor.getId(), vendor);
             logger.info("Authenticated vendor: {}", firebaseUid);
         } else {
             logger.warn("User {} attempted to access vendor resources but was not found", firebaseUid);
@@ -153,8 +152,8 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
         if (mohUser != null && "active".equals(mohUser.getState())) {
 
             String role = "admin".equals(mohUser.getAccountType()) ? "MOH_OFFICE_ADMIN" : "MOH_OFFICE_USER";
-            
-            setAuthentication(firebaseUid, role);
+
+            setAuthentication(firebaseUid, role, mohUser.getId(), mohUser);
             logger.info("Authenticated MOH user: {} as role: {}", firebaseUid, role);
         } else {
             logger.warn("User {} attempted to access MOH resources but was not found or not active", firebaseUid);
@@ -164,16 +163,19 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
     /**
      * Set authentication in the security context with the specified role
      */
-    private void setAuthentication(String firebaseUid, String role) {
+    private void setAuthentication(String firebaseUid, String role, String Id, Object userEntity) {
         List<SimpleGrantedAuthority> authorities = Collections.singletonList(
             new SimpleGrantedAuthority("ROLE_" + role)
         );
         
-        UsernamePasswordAuthenticationToken authentication = 
-            new UsernamePasswordAuthenticationToken(
+        CustomAuthenticationToken authentication = 
+            new CustomAuthenticationToken(
                 firebaseUid, 
                 null, 
-                authorities
+                authorities,
+                Id,  // MongoDB ID
+                role, // User role
+                userEntity // The complete user entity
             );
         
         SecurityContextHolder.getContext().setAuthentication(authentication);

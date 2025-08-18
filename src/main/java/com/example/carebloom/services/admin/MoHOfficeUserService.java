@@ -5,7 +5,6 @@ import com.example.carebloom.dto.admin.CreateUserRequest;
 import com.example.carebloom.dto.admin.UpdateUserRequest;
 import com.example.carebloom.repositories.MoHOfficeUserRepository;
 import com.example.carebloom.repositories.MOHOfficeRepository;
-import com.google.firebase.auth.UserRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,8 +25,6 @@ public class MoHOfficeUserService {
     @Autowired
     private MOHOfficeRepository mohOfficeRepository;
     
-    @Autowired
-    private FirebaseUserService firebaseUserService;
     
     public List<MoHOfficeUser> getUsersByOfficeId(String officeId) {
         // Verify office exists
