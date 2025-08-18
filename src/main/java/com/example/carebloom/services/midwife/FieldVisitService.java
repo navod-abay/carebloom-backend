@@ -14,8 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class FieldVisitService {
@@ -56,8 +56,42 @@ public class FieldVisitService {
         // Save to database
         FieldVisit savedFieldVisit = fieldVisitRepository.save(fieldVisit);
 
-        // Convert to response DTO
-        return convertToResponseDTO(savedFieldVisit);
+        // Update each mother's fieldVisitAppointment and collect mother info for response
+        List<FieldVisitResponseDTO.MotherBasicInfo> mothers = new ArrayList<>();
+        for (String motherId : createDTO.getSelectedMotherIds()) {
+            Mother mother = motherRepository.findById(motherId).orElse(null);
+            if (mother != null) {
+                Mother.FieldVisitAppointment appointment = new Mother.FieldVisitAppointment();
+                appointment.setVisitId(savedFieldVisit.getId());
+                appointment.setDate(createDTO.getDate());
+                appointment.setStartTime(createDTO.getStartTime());
+                appointment.setEndTime(createDTO.getEndTime());
+                appointment.setStatus("new");
+                
+                mother.setFieldVisitAppointment(appointment);
+                motherRepository.save(mother);
+                
+                // Add to response list
+                FieldVisitResponseDTO.MotherBasicInfo motherInfo = new FieldVisitResponseDTO.MotherBasicInfo();
+                motherInfo.setId(motherId);
+                motherInfo.setName(mother.getName());
+                mothers.add(motherInfo);
+            } else {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Mother not found with ID: " + motherId);
+            }
+        }
+
+        // Build response DTO directly
+        FieldVisitResponseDTO dto = new FieldVisitResponseDTO();
+        dto.setId(savedFieldVisit.getId());
+        dto.setDate(savedFieldVisit.getDate());
+        dto.setStartTime(savedFieldVisit.getStartTime());
+        dto.setEndTime(savedFieldVisit.getEndTime());
+        dto.setMidwifeId(savedFieldVisit.getMidwifeId());
+        dto.setStatus(savedFieldVisit.getStatus());
+        dto.setMothers(mothers);
+
+        return dto;
     }
 
     /**
@@ -71,9 +105,31 @@ public class FieldVisitService {
         }
 
         List<FieldVisit> fieldVisits = fieldVisitRepository.findByMidwifeId(midwife.getId());
-        return fieldVisits.stream()
-                .map(this::convertToResponseDTO)
-                .toList();
+        List<FieldVisitResponseDTO> responseDTOs = new ArrayList<>();
+        
+        for (FieldVisit fieldVisit : fieldVisits) {
+            FieldVisitResponseDTO dto = new FieldVisitResponseDTO();
+            dto.setId(fieldVisit.getId());
+            dto.setDate(fieldVisit.getDate());
+            dto.setStartTime(fieldVisit.getStartTime());
+            dto.setEndTime(fieldVisit.getEndTime());
+            dto.setMidwifeId(fieldVisit.getMidwifeId());
+            dto.setStatus(fieldVisit.getStatus());
+            
+            // Get mother details
+            List<FieldVisitResponseDTO.MotherBasicInfo> mothers = new ArrayList<>();
+            for (String motherId : fieldVisit.getSelectedMotherIds()) {
+                Mother mother = motherRepository.findById(motherId).orElse(null);
+                FieldVisitResponseDTO.MotherBasicInfo motherInfo = new FieldVisitResponseDTO.MotherBasicInfo();
+                motherInfo.setId(motherId);
+                motherInfo.setName(mother != null ? mother.getName() : "Unknown Mother");
+                mothers.add(motherInfo);
+            }
+            dto.setMothers(mothers);
+            responseDTOs.add(dto);
+        }
+        
+        return responseDTOs;
     }
 
     /**
@@ -105,37 +161,6 @@ public class FieldVisitService {
         if (!isValidDateFormat(createDTO.getDate())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date format must be YYYY-MM-DD");
         }
-    }
-
-    /**
-     * Convert FieldVisit entity to response DTO
-     */
-    private FieldVisitResponseDTO convertToResponseDTO(FieldVisit fieldVisit) {
-        FieldVisitResponseDTO dto = new FieldVisitResponseDTO();
-        dto.setId(fieldVisit.getId());
-        dto.setDate(fieldVisit.getDate());
-        dto.setStartTime(fieldVisit.getStartTime());
-        dto.setEndTime(fieldVisit.getEndTime());
-        dto.setMidwifeId(fieldVisit.getMidwifeId());
-        dto.setStatus(fieldVisit.getStatus());
-        
-        // Get mother details from repository
-        List<FieldVisitResponseDTO.MotherBasicInfo> mothers = fieldVisit.getSelectedMotherIds().stream()
-                .map(motherId -> {
-                    Mother mother = motherRepository.findById(motherId).orElse(null);
-                    FieldVisitResponseDTO.MotherBasicInfo motherInfo = new FieldVisitResponseDTO.MotherBasicInfo();
-                    motherInfo.setId(motherId);
-                    if (mother != null) {
-                        motherInfo.setName(mother.getName());
-                    } else {
-                        motherInfo.setName("Unknown Mother");
-                    }
-                    return motherInfo;
-                })
-                .collect(Collectors.toList());
-        
-        dto.setMothers(mothers);
-        return dto;
     }
 
     /**

@@ -97,6 +97,7 @@ public class AuthService {
         mother.setMohOfficeId(request.getMohOfficeId()); // Updated to use mohOfficeId
         mother.setRecordNumber(request.getRecordNumber());
         mother.setAreaMidwifeId(request.getAreaMidwifeId()); // Updated to use areaMidwifeId
+        mother.setUnitId(request.getUnitId()); // Updated to use unitId
         mother.setRegistrationStatus("complete");
         
         mother = motherRepository.save(mother);

@@ -26,4 +26,7 @@ public interface WorkshopRepository extends MongoRepository<Workshop, String> {
 
     // Find all active workshops
     List<Workshop> findByIsActiveTrue();
+    
+    // Find upcoming workshops for a specific MoH office
+    List<Workshop> findByMohOfficeIdAndIsActiveTrueOrderByDateAsc(String mohOfficeId);
 }

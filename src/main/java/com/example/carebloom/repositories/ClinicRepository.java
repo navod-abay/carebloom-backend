@@ -19,4 +19,10 @@ public interface ClinicRepository extends MongoRepository<Clinic, String> {
 
     List<Clinic> findByUserIdAndDateAndIsActiveTrue(String userId, String date);
 
+    // Find upcoming clinics for mother's MoH office
+    List<Clinic> findByMohOfficeIdAndIsActiveTrueOrderByDateAsc(String mohOfficeId);
+    
+    // Find clinics where mother is registered
+    List<Clinic> findByRegisteredMotherIdsContainingAndIsActiveTrueOrderByDateAsc(String motherId);
+
 }
