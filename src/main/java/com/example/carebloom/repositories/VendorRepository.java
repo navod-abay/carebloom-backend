@@ -5,6 +5,14 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface VendorRepository extends MongoRepository<Vendor, String> {
     Vendor findByFirebaseUid(String firebaseUid);
+
     Vendor findByEmail(String email);
+
     Vendor findByBusinessRegistrationNumber(String businessRegistrationNumber);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByFirebaseUid(String firebaseUid);
+
+    boolean existsByBusinessRegistrationNumber(String businessRegistrationNumber);
 }
