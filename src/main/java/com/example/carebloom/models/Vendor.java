@@ -10,6 +10,7 @@ public class Vendor {
     @Id
     private String id;
     private String firebaseUid;
+    private String registrationStatus;
     private String email;
     private String name;
     private String businessName;
