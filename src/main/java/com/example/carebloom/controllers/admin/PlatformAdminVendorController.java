@@ -1,7 +1,6 @@
 package com.example.carebloom.controllers.admin;
 
 import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-
 import com.example.carebloom.services.admin.PlatformAdminVendorService;
 
 @RestController
@@ -41,4 +39,5 @@ public class PlatformAdminVendorController {
                     .body(Map.of("error", "Failed to accept vendor registration: " + e.getMessage()));
         }
     }
+
 }

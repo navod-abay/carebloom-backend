@@ -17,21 +17,45 @@ public class PlatformAdminVendorService {
     @Autowired
     private VendorRepository vendorRepository;
 
+    /**
+     * Accept vendor registration - sets state to "approved"
+     */
     public void acceptVendorRegistration(String vendorId) {
         Optional<Vendor> vendorOpt = vendorRepository.findById(vendorId);
         if (vendorOpt.isEmpty()) {
             logger.error("Vendor not found with ID: {}", vendorId);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Vendor not found");
         }
+
         Vendor vendor = vendorOpt.get();
-        if (!"complete".equalsIgnoreCase(vendor.getRegistrationStatus())) {
-            logger.error("Vendor {} registration status is not 'completed': {}", vendorId,
-                    vendor.getRegistrationStatus());
+        if (!"pending".equalsIgnoreCase(vendor.getState())) {
+            logger.error("Vendor {} state is not 'pending': {}", vendorId, vendor.getState());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Vendor registration status must be 'completed' to accept");
+                    "Vendor state must be 'pending' to accept");
         }
-        vendor.setRegistrationStatus("accepted");
+
+        vendor.setState("approved");
         vendorRepository.save(vendor);
         logger.info("Vendor {} registration accepted", vendorId);
     }
+
+    // TODO: Commented out old implementation - keeping for reference
+    // public void acceptVendorRegistration(String vendorId) {
+    // Optional<Vendor> vendorOpt = vendorRepository.findById(vendorId);
+    // if (vendorOpt.isEmpty()) {
+    // logger.error("Vendor not found with ID: {}", vendorId);
+    // throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Vendor not found");
+    // }
+    // Vendor vendor = vendorOpt.get();
+    // if (!"complete".equalsIgnoreCase(vendor.getRegistrationStatus())) {
+    // logger.error("Vendor {} registration status is not 'completed': {}",
+    // vendorId,
+    // vendor.getRegistrationStatus());
+    // throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+    // "Vendor registration status must be 'completed' to accept");
+    // }
+    // vendor.setRegistrationStatus("accepted");
+    // vendorRepository.save(vendor);
+    // logger.info("Vendor {} registration accepted", vendorId);
+    // }
 }
