@@ -30,66 +30,64 @@ import java.util.List;
 
 @Component
 public class RoleAuthenticationFilter extends OncePerRequestFilter {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(RoleAuthenticationFilter.class);
-    
+
     @Autowired
     private PlatformAdminRepository platformAdminRepository;
-    
+
     @Autowired
     private MotherRepository motherRepository;
-    
+
     @Autowired
     private MoHOfficeUserRepository moHOfficeUserRepository;
-    
+
     @Autowired
     private MidwifeRepository midwifeRepository;
-    
+
     @Autowired
     private VendorRepository vendorRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                  HttpServletResponse response, 
-                                  FilterChain filterChain) throws ServletException, IOException {
-        
+    protected void doFilterInternal(HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
+
         String authHeader = request.getHeader("Authorization");
         String path = request.getRequestURI();
-        
+
         // Only process if there's a Bearer token
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
                 String token = authHeader.replace("Bearer ", "");
                 FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
                 String firebaseUid = decodedToken.getUid();
-                
-                logger.debug("Processing authentication for path: {}, UID: {}", path, firebaseUid);
-                
-                // Path-based repository check - only query the relevant repository based on the path
-                if (path.startsWith("/api/v1/admin/")) {
-                    authenticateAdmin(firebaseUid);
-                } 
-                else if (path.startsWith("/api/v1/mothers/")) {
-                    authenticateMother(firebaseUid);
-                } 
-                else if (path.startsWith("/api/v1/midwife/")) {
-                    authenticateMidwife(firebaseUid);
-                } 
-                else if (path.startsWith("/api/v1/vendor/")) {
-                    authenticateVendor(firebaseUid);
-                } 
-                else if (path.startsWith("/api/v1/moh/")) {
-                    authenticateMohUser(firebaseUid);
+                if (!firebaseUid.equals("anonymousUser")) {
+                    logger.debug("Processing authentication for path: {}, UID: {}", path, firebaseUid);
+
+                    // Path-based repository check - only query the relevant repository based on the
+                    // path
+                    if (path.startsWith("/api/v1/admin/")) {
+                        authenticateAdmin(firebaseUid);
+                    } else if (path.startsWith("/api/v1/mothers/")) {
+                        authenticateMother(firebaseUid);
+                    } else if (path.startsWith("/api/v1/midwife/")) {
+                        authenticateMidwife(firebaseUid);
+                    } else if (path.startsWith("/api/v1/vendor/")) {
+                        authenticateVendor(firebaseUid);
+                    } else if (path.startsWith("/api/v1/moh/")) {
+                        authenticateMohUser(firebaseUid);
+                    }
                 }
             } catch (Exception e) {
                 logger.error("Token verification failed for path: {}", path, e);
                 // Don't set authentication - let Spring Security handle the rejection
             }
         }
-        
+
         filterChain.doFilter(request, response);
     }
-    
+
     /**
      * Authenticate a platform admin user
      */
@@ -102,7 +100,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
             logger.warn("User {} attempted to access admin resources but was not found", firebaseUid);
         }
     }
-    
+
     /**
      * Authenticate a mother user
      */
@@ -115,7 +113,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
             logger.warn("User {} attempted to access mother resources but was not found", firebaseUid);
         }
     }
-    
+
     /**
      * Authenticate a midwife user
      */
@@ -128,7 +126,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
             logger.warn("User {} attempted to access midwife resources but was not found", firebaseUid);
         }
     }
-    
+
     /**
      * Authenticate a vendor user
      */
@@ -141,13 +139,14 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
             logger.warn("User {} attempted to access vendor resources but was not found", firebaseUid);
         }
     }
-    
+
     /**
-     * Authenticate a MOH Office user, determining their specific role based on the role field first, then accountType
+     * Authenticate a MOH Office user, determining their specific role based on the
+     * role field first, then accountType
      */
     private void authenticateMohUser(String firebaseUid) {
         MoHOfficeUser mohUser = moHOfficeUserRepository.findByFirebaseUid(firebaseUid);
-        
+
         // Only authenticate active MoH users
         if (mohUser != null && "active".equals(mohUser.getState())) {
 
@@ -159,25 +158,23 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
             logger.warn("User {} attempted to access MOH resources but was not found or not active", firebaseUid);
         }
     }
-    
+
     /**
      * Set authentication in the security context with the specified role
      */
     private void setAuthentication(String firebaseUid, String role, String Id, Object userEntity) {
         List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-            new SimpleGrantedAuthority("ROLE_" + role)
-        );
-        
-        CustomAuthenticationToken authentication = 
-            new CustomAuthenticationToken(
-                firebaseUid, 
-                null, 
+                new SimpleGrantedAuthority("ROLE_" + role));
+
+        CustomAuthenticationToken authentication = new CustomAuthenticationToken(
+                firebaseUid,
+                null,
                 authorities,
-                Id,  // MongoDB ID
+                Id, // MongoDB ID
                 role, // User role
                 userEntity // The complete user entity
-            );
-        
+        );
+
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }

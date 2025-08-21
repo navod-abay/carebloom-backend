@@ -93,11 +93,33 @@ public class AuthService {
             throw new RuntimeException("Invalid registration step");
         }
         
+        // Update basic location information
         mother.setDistrict(request.getDistrict());
-        mother.setMohOfficeId(request.getMohOfficeId()); // Updated to use mohOfficeId
+        mother.setMohOfficeId(request.getMohOfficeId());
         mother.setRecordNumber(request.getRecordNumber());
-        mother.setAreaMidwifeId(request.getAreaMidwifeId()); // Updated to use areaMidwifeId
-        mother.setUnitId(request.getUnitId()); // Updated to use unitId
+        mother.setAreaMidwifeId(request.getAreaMidwifeId());
+        mother.setUnitId(request.getUnitId());
+        
+        // Update GPS coordinates if provided
+        if (request.getLocation() != null) {
+            mother.setLatitude(request.getLocation().getLatitude());
+            mother.setLongitude(request.getLocation().getLongitude());
+            
+            // Create a readable address description for verification
+            if (request.getLocation().getLatitude() != null && request.getLocation().getLongitude() != null) {
+                String gpsAddress = String.format("GPS: %.6f, %.6f", 
+                    request.getLocation().getLatitude(), 
+                    request.getLocation().getLongitude());
+                
+                // Add accuracy info if available
+                if (request.getLocation().getAccuracy() != null) {
+                    gpsAddress += String.format(" (±%.1fm)", request.getLocation().getAccuracy());
+                }
+                
+                mother.setLocationAddress(gpsAddress);
+            }
+        }
+        
         mother.setRegistrationStatus("complete");
         
         mother = motherRepository.save(mother);

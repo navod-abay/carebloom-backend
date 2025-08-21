@@ -17,5 +17,8 @@ public class FieldVisitResponseDTO {
     public static class MotherBasicInfo {
         private String id;
         private String name;
+        private String startTime;
+        private String endTime;
+        private String status; // 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
     }
 }

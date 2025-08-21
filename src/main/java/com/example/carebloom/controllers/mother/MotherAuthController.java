@@ -5,10 +5,10 @@ import com.example.carebloom.dto.PersonalRegistrationRequest;
 import com.example.carebloom.dto.RegistrationRequest;
 import com.example.carebloom.models.UserProfile;
 import com.example.carebloom.services.AuthService;
+import com.example.carebloom.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,17 +24,18 @@ public class MotherAuthController {
     private AuthService authService;
 
     @PostMapping("/verify")
-    public ResponseEntity<?> verifyToken(@RequestHeader("Authorization") String idToken) {
+    public ResponseEntity<UserProfile> verifyToken(@RequestHeader("Authorization") String idToken) {
         try {
             UserProfile profile = authService.verifyIdToken(idToken);
-            return ResponseEntity.ok().body(profile);
+            return ResponseEntity.ok(profile);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            logger.error("Token verification failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerMother(
+    public ResponseEntity<UserProfile> registerMother(
             @RequestHeader("Authorization") String idToken,
             @RequestBody RegistrationRequest request) {
         try {
@@ -46,75 +47,128 @@ public class MotherAuthController {
             logger.info("Mother registration successful for email: {}, profile ID: {}", 
                        request.getEmail(), profile.getId());
             
-            return ResponseEntity.ok().body(profile);
+            return ResponseEntity.status(HttpStatus.CREATED).body(profile);
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid registration data for email: {}, error: {}", request.getEmail(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
             logger.error("Mother registration failed for email: {}, error: {}", 
                         request.getEmail(), e.getMessage(), e);
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
-    @PostMapping("/register/personal")
-    public ResponseEntity<?> registerPersonal(
+    @PutMapping("/register/personal")
+    public ResponseEntity<UserProfile> registerPersonal(
             @RequestHeader("Authorization") String idToken,
             @RequestBody PersonalRegistrationRequest request) {
         try {
             UserProfile profile = authService.updatePersonalInfo(idToken, request);
-            return ResponseEntity.ok().body(profile);
+            return ResponseEntity.ok(profile);
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid personal registration data: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            logger.error("Personal registration failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
-    @PostMapping("/register/location")
-    public ResponseEntity<?> registerLocation(
+    @PutMapping("/register/location")
+    public ResponseEntity<UserProfile> registerLocation(
             @RequestHeader("Authorization") String idToken,
             @RequestBody LocationRegistrationRequest request) {
         try {
+            // Validate required fields
+            if (request.getDistrict() == null || request.getDistrict().trim().isEmpty()) {
+                logger.error("District is required for location registration");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            
+            if (request.getMohOfficeId() == null || request.getMohOfficeId().trim().isEmpty()) {
+                logger.error("MOH Office ID is required for location registration");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            
+            if (request.getAreaMidwifeId() == null || request.getAreaMidwifeId().trim().isEmpty()) {
+                logger.error("Area Midwife ID is required for location registration");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            
+            // Validate GPS coordinates if provided
+            if (request.getLocation() != null) {
+                LocationRegistrationRequest.LocationCoordinates location = request.getLocation();
+                if (location.getLatitude() != null && location.getLongitude() != null) {
+                    // Validate coordinate ranges
+                    if (location.getLatitude() < -90 || location.getLatitude() > 90) {
+                        logger.error("Invalid latitude: {}", location.getLatitude());
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                    }
+                    if (location.getLongitude() < -180 || location.getLongitude() > 180) {
+                        logger.error("Invalid longitude: {}", location.getLongitude());
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                    }
+                    
+                    logger.info("Location registration with GPS coordinates: lat={}, lng={}, accuracy={}m", 
+                               location.getLatitude(), location.getLongitude(), location.getAccuracy());
+                } else {
+                    logger.info("Location registration without GPS coordinates");
+                }
+            }
+            
             UserProfile profile = authService.updateLocation(idToken, request);
-            return ResponseEntity.ok().body(profile);
+            logger.info("Location registration successful for user: {}", profile.getId());
+            return ResponseEntity.ok(profile);
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid location registration data: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            logger.error("Location registration failed: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    @PostMapping("/register/skip-location")
-    public ResponseEntity<?> skipLocation(
+    @PutMapping("/register/skip-location")
+    public ResponseEntity<UserProfile> skipLocation(
             @RequestHeader("Authorization") String idToken) {
         try {
             UserProfile profile = authService.skipLocation(idToken);
-            return ResponseEntity.ok().body(profile);
+            return ResponseEntity.ok(profile);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            logger.error("Skip location failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<?> getProfile() {
+    public ResponseEntity<UserProfile> getProfile() {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !authentication.isAuthenticated()) {
-                logger.debug("No authentication context available");
-                return ResponseEntity.ok().body(new Object()); // Return empty object
+            // Get Firebase UID from security context
+            String firebaseUid = SecurityUtils.getCurrentFirebaseUid();
+            if (firebaseUid == null || "anonymousUser".equals(firebaseUid)) {
+                logger.debug("No valid Firebase UID found: {}", firebaseUid);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
-            String firebaseUid = authentication.getName();
-            if (firebaseUid == null || firebaseUid.isEmpty()) {
-                logger.debug("No Firebase UID found in authentication context");
-                return ResponseEntity.ok().body(new Object()); // Return empty object
+            // Try to get user entity from security context first (no DB query needed)
+            Object userEntity = SecurityUtils.getCurrentUserEntity();
+            if (userEntity instanceof UserProfile) {
+                logger.info("Profile retrieved from security context for Firebase UID: {}", firebaseUid);
+                return ResponseEntity.ok((UserProfile) userEntity);
             }
 
+            // Fallback to service lookup if not in security context
             UserProfile profile = authService.getProfileByFirebaseUid(firebaseUid);
             if (profile == null) {
                 logger.debug("No profile found for Firebase UID: {}", firebaseUid);
-                return ResponseEntity.ok().body(new Object()); // Return empty object
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
-            logger.info("Profile retrieved for Firebase UID: {}", firebaseUid);
-            return ResponseEntity.ok().body(profile);
+            logger.info("Profile retrieved from service for Firebase UID: {}", firebaseUid);
+            return ResponseEntity.ok(profile);
         } catch (Exception e) {
             logger.error("Error retrieving profile: {}", e.getMessage(), e);
-            return ResponseEntity.ok().body(new Object()); // Return empty object on error
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
