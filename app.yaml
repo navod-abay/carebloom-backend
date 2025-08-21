@@ -1,0 +1,32 @@
+runtime: java21
+instance_class: F2
+
+automatic_scaling:
+  min_instances: 0
+  max_instances: 10
+  target_cpu_utilization: 0.6
+
+env_variables:
+  SPRING_PROFILES_ACTIVE: "prod"
+  # Add your environment variables here
+  # GOOGLE_MAPS_API_KEY: "your-api-key-here"
+  # MONGODB_URI: "your-mongodb-connection-string"
+
+resources:
+  cpu: 1
+  memory_gb: 2
+
+# Health check configuration
+readiness_check:
+  path: "/health"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+liveness_check:
+  path: "/health"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 4
+  success_threshold: 2

@@ -32,4 +32,20 @@ build/
 ### VS Code ###
 .vscode/
 
+# Firebase service account (security)
 /src/main/resources/firebase-service-account.json
+
+# Google Cloud deployment
+.gcloudignore
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Application specific
+application-local.properties
