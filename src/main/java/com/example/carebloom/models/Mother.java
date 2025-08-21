@@ -24,6 +24,11 @@ public class Mother {
     private String mohOfficeId; // Reference to MOHOffice table
     private String areaMidwifeId; // Reference to Midwife table
     private String recordNumber;
+    
+    // Geographic coordinates for route optimization
+    private Double latitude;
+    private Double longitude;
+    private String locationAddress; // Human-readable address for verification
 
     private String unitId;
     

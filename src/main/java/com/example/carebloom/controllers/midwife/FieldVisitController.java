@@ -2,6 +2,8 @@ package com.example.carebloom.controllers.midwife;
 
 import com.example.carebloom.dto.midwife.FieldVisitCreateDTO;
 import com.example.carebloom.dto.midwife.FieldVisitResponseDTO;
+import com.example.carebloom.dto.midwife.CalculateVisitOrderDTO;
+import com.example.carebloom.dto.midwife.CalculateVisitOrderResponseDTO;
 import com.example.carebloom.services.midwife.FieldVisitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +81,53 @@ public class FieldVisitController {
             logger.error("Error getting field visits: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Failed to get field visits: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/field-visits/{id}")
+    public ResponseEntity<FieldVisitResponseDTO> getFieldVisitById(@PathVariable String id) {
+        try {
+            logger.debug("Getting field visit details for ID: {}", id);
+
+            FieldVisitResponseDTO fieldVisit = fieldVisitService.getFieldVisitById(id);
+            
+            logger.info("Retrieved field visit details for ID: {}", id);
+            return ResponseEntity.ok(fieldVisit);
+
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            logger.error("Error getting field visit by ID {}: {}", id, e.getReason());
+            return ResponseEntity.status(e.getStatusCode()).build();
+        } catch (Exception e) {
+            logger.error("Unexpected error getting field visit by ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/field-visits/{id}/calculate")
+    public ResponseEntity<CalculateVisitOrderResponseDTO> calculateVisitOrder(
+            @PathVariable String id,
+            @RequestBody CalculateVisitOrderDTO request) {
+        try {
+            logger.debug("Calculating visit order for field visit ID: {}", id);
+
+            CalculateVisitOrderResponseDTO response = fieldVisitService.calculateVisitOrder(id, request);
+            
+            if (response.isSuccess()) {
+                logger.info("Visit order calculated successfully for field visit ID: {}", id);
+                return ResponseEntity.ok(response);
+            } else {
+                logger.warn("Failed to calculate visit order for field visit ID: {}, reason: {}", id, response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+
+        } catch (Exception e) {
+            logger.error("Unexpected error calculating visit order for field visit ID {}: {}", id, e.getMessage(), e);
+            
+            CalculateVisitOrderResponseDTO errorResponse = new CalculateVisitOrderResponseDTO();
+            errorResponse.setSuccess(false);
+            errorResponse.setMessage("Internal server error occurred while calculating visit order");
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 }
