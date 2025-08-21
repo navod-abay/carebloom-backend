@@ -4,12 +4,15 @@ import com.example.carebloom.dto.midwife.FieldVisitCreateDTO;
 import com.example.carebloom.dto.midwife.FieldVisitResponseDTO;
 import com.example.carebloom.dto.midwife.CalculateVisitOrderDTO;
 import com.example.carebloom.dto.midwife.CalculateVisitOrderResponseDTO;
+import com.example.carebloom.dto.navigation.NavigationLocation;
+import com.example.carebloom.dto.navigation.TravelTimeResult;
 import com.example.carebloom.models.FieldVisit;
 import com.example.carebloom.models.Midwife;
 import com.example.carebloom.models.Mother;
 import com.example.carebloom.repositories.FieldVisitRepository;
 import com.example.carebloom.repositories.MidwifeRepository;
 import com.example.carebloom.repositories.MotherRepository;
+import com.example.carebloom.services.navigation.GoogleMapsDistanceService;
 import com.example.carebloom.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -40,6 +43,9 @@ public class FieldVisitService {
 
     @Autowired
     private RouteOptimizationService routeOptimizationService;
+
+    @Autowired
+    private GoogleMapsDistanceService googleMapsDistanceService;
 
     /**
      * Create a new field visit for a midwife
@@ -320,7 +326,7 @@ public class FieldVisitService {
             // Use simple time-based ordering as fallback
             List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder = calculateSimpleTimeBasedOrder(
                 mothersWithLocation, fieldVisit);
-            return createSuccessResponse(visitOrder);
+            return createSuccessResponse(visitOrder, fieldVisit);
         }
 
         if (mothersWithLocation.size() < eligibleMothers.size()) {
@@ -339,13 +345,13 @@ public class FieldVisitService {
             List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder = 
                 convertToVisitOrderResponse(optimizedOrder, fieldVisit);
             
-            return createSuccessResponse(visitOrder);
+            return createSuccessResponse(visitOrder, fieldVisit);
             
         } catch (Exception e) {
             logger.error("Error during route optimization, falling back to simple ordering", e);
             List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder = calculateSimpleTimeBasedOrder(
                 mothersWithLocation, fieldVisit);
-            return createSuccessResponse(visitOrder);
+            return createSuccessResponse(visitOrder, fieldVisit);
         }
     }
 
@@ -460,9 +466,9 @@ public class FieldVisitService {
     }
 
     /**
-     * Create success response with calculated visit order
+     * Create success response with calculated visit order and persist the order
      */
-    private CalculateVisitOrderResponseDTO createSuccessResponse(List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder) {
+    private CalculateVisitOrderResponseDTO createSuccessResponse(List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder, FieldVisit fieldVisit) {
         // Calculate totals
         double totalDistance = visitOrder.stream()
             .mapToDouble(order -> order.getDistance() != null ? order.getDistance() : 0.0)
@@ -472,20 +478,74 @@ public class FieldVisitService {
             .mapToInt(order -> order.getEstimatedDuration() != null ? order.getEstimatedDuration() : 30)
             .sum();
 
+        // Persist the calculated order to database
+        persistVisitOrder(visitOrder, fieldVisit);
+
         CalculateVisitOrderResponseDTO response = new CalculateVisitOrderResponseDTO();
         response.setSuccess(true);
-        response.setMessage("Visit order calculated successfully using route optimization");
+        response.setMessage("Visit order calculated and saved successfully");
         response.setVisitOrder(visitOrder);
         response.setTotalDistance(totalDistance);
         response.setTotalEstimatedTime(totalTime);
 
-        logger.info("Visit order calculated successfully: {} mothers, total distance: {}m, total time: {}min", 
+        logger.info("Visit order calculated and persisted successfully: {} mothers, total distance: {}m, total time: {}min", 
                    visitOrder.size(), totalDistance, totalTime);
         return response;
     }
 
     /**
-     * Convert optimized mother list to visit order response format
+     * Persist the calculated visit order to database
+     */
+    private void persistVisitOrder(List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder, FieldVisit fieldVisit) {
+        try {
+            // 1. Update FieldVisit status to CALCULATED and reorder selectedMotherIds
+            List<String> orderedMotherIds = visitOrder.stream()
+                .map(CalculateVisitOrderResponseDTO.VisitOrder::getMotherId)
+                .collect(Collectors.toList());
+            
+            fieldVisit.setSelectedMotherIds(orderedMotherIds);
+            fieldVisit.setStatus("CALCULATED");
+            fieldVisit.setUpdatedAt(LocalDateTime.now());
+            fieldVisitRepository.save(fieldVisit);
+            
+            logger.info("Updated FieldVisit {} status to CALCULATED with ordered mothers: {}", 
+                       fieldVisit.getId(), orderedMotherIds);
+
+            // 2. Update each Mother's FieldVisitAppointment status to "ordered"
+            for (int i = 0; i < visitOrder.size(); i++) {
+                CalculateVisitOrderResponseDTO.VisitOrder order = visitOrder.get(i);
+                Mother mother = motherRepository.findById(order.getMotherId()).orElse(null);
+                
+                if (mother != null && mother.getFieldVisitAppointment() != null && 
+                    fieldVisit.getId().equals(mother.getFieldVisitAppointment().getVisitId())) {
+                    
+                    // Update appointment with calculated times and ordered status
+                    Mother.FieldVisitAppointment appointment = mother.getFieldVisitAppointment();
+                    appointment.setStatus("ordered");
+                    appointment.setStartTime(order.getEstimatedArrivalTime());
+                    
+                    // Calculate end time based on estimated duration
+                    String endTime = addMinutesToTime(order.getEstimatedArrivalTime(), 
+                                                     order.getEstimatedDuration());
+                    appointment.setEndTime(endTime);
+                    
+                    motherRepository.save(mother);
+                    
+                    logger.debug("Updated Mother {} appointment status to 'ordered', time slot: {} - {}", 
+                               mother.getId(), appointment.getStartTime(), appointment.getEndTime());
+                }
+            }
+            
+            logger.info("Successfully updated {} mothers' appointment status to 'ordered'", visitOrder.size());
+            
+        } catch (Exception e) {
+            logger.error("Error persisting visit order for FieldVisit {}: {}", fieldVisit.getId(), e.getMessage(), e);
+            // Don't throw exception - we still want to return the calculated order even if persistence fails
+        }
+    }
+
+    /**
+     * Convert optimized mother list to visit order response format with real navigation data
      */
     private List<CalculateVisitOrderResponseDTO.VisitOrder> convertToVisitOrderResponse(
             List<Mother> optimizedMothers, FieldVisit fieldVisit) {
@@ -503,26 +563,72 @@ public class FieldVisitService {
             order.setEstimatedArrivalTime(currentTime);
             order.setEstimatedDuration(30); // Default 30 minutes per visit
             
-            // Calculate distance from previous location (simplified)
+            // Calculate real travel time and distance from previous location
             if (i == 0) {
                 order.setDistance(0.0); // Starting point
+                order.setTravelTimeMinutes(0); // No travel for first location
             } else {
                 Mother prevMother = optimizedMothers.get(i - 1);
-                if (routeOptimizationService.hasValidCoordinates(mother) && 
-                    routeOptimizationService.hasValidCoordinates(prevMother)) {
-                    // Use Haversine distance calculation if coordinates available
+                try {
+                    // Create navigation locations
+                    NavigationLocation from = NavigationLocation.builder()
+                        .latitude(prevMother.getLatitude())
+                        .longitude(prevMother.getLongitude())
+                        .name(prevMother.getName())
+                        .build();
+                    
+                    NavigationLocation to = NavigationLocation.builder()
+                        .latitude(mother.getLatitude())
+                        .longitude(mother.getLongitude())
+                        .name(mother.getName())
+                        .build();
+                    
+                    // Get real travel time from Google Maps
+                    TravelTimeResult travelResult = googleMapsDistanceService.getTravelTime(from, to);
+                    
+                    if (travelResult.isValid()) {
+                        order.setDistance(travelResult.getDistanceMeters());
+                        order.setTravelTimeMinutes((int) Math.ceil(travelResult.getDurationInTrafficSeconds() / 60.0));
+                        
+                        logger.debug("Real navigation data - From {} to {}: distance={}m, time={}min", 
+                                   prevMother.getName(), mother.getName(),
+                                   travelResult.getDistanceMeters(), 
+                                   travelResult.getDurationInTrafficSeconds() / 60);
+                    } else {
+                        // Fallback to Haversine calculation
+                        double distance = calculateHaversineDistance(
+                            prevMother.getLatitude(), prevMother.getLongitude(),
+                            mother.getLatitude(), mother.getLongitude()
+                        );
+                        order.setDistance(distance);
+                        // Estimate travel time: assume 25 km/h average speed
+                        int estimatedMinutes = (int) Math.ceil(distance / (25.0 * 1000 / 60));
+                        order.setTravelTimeMinutes(estimatedMinutes);
+                        
+                        logger.debug("Fallback navigation data - From {} to {}: distance={}m, estimated time={}min", 
+                                   prevMother.getName(), mother.getName(), distance, estimatedMinutes);
+                    }
+                    
+                } catch (Exception e) {
+                    logger.error("Error getting navigation data from {} to {}, using fallback", 
+                               prevMother.getName(), mother.getName(), e);
+                    
+                    // Complete fallback
                     double distance = calculateHaversineDistance(
                         prevMother.getLatitude(), prevMother.getLongitude(),
                         mother.getLatitude(), mother.getLongitude()
                     );
                     order.setDistance(distance);
-                } else {
-                    order.setDistance(1000.0 * i); // Fallback: 1km per step
+                    order.setTravelTimeMinutes((int) Math.ceil(distance / (25.0 * 1000 / 60)));
                 }
             }
             
             visitOrder.add(order);
-            currentTime = addMinutesToTime(currentTime, 30);
+            
+            // Calculate next arrival time: current time + travel time + service time
+            int totalMinutesToAdd = (order.getTravelTimeMinutes() != null ? order.getTravelTimeMinutes() : 0) + 
+                                   order.getEstimatedDuration();
+            currentTime = addMinutesToTime(currentTime, totalMinutesToAdd);
         }
         
         return visitOrder;

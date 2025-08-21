@@ -19,5 +19,6 @@ public class CalculateVisitOrderResponseDTO {
         private String estimatedArrivalTime; // HH:MM format
         private Integer estimatedDuration; // minutes
         private Double distance; // meters from previous location
+        private Integer travelTimeMinutes; // real travel time from Google Maps
     }
 }

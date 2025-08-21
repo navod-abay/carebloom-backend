@@ -1,9 +1,13 @@
 package com.example.carebloom.services.midwife;
 
+import com.example.carebloom.dto.navigation.NavigationLocation;
+import com.example.carebloom.dto.navigation.TravelTimeResult;
 import com.example.carebloom.models.Mother;
+import com.example.carebloom.services.navigation.GoogleMapsDistanceService;
 import com.google.ortools.Loader;
 import com.google.ortools.constraintsolver.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +20,9 @@ public class RouteOptimizationService {
 
     @Value("${google.maps.api.key:}")
     private String googleMapsApiKey;
+
+    @Autowired
+    private GoogleMapsDistanceService googleMapsDistanceService;
 
     private boolean isOrToolsAvailable = false;
 
@@ -139,25 +146,81 @@ public class RouteOptimizationService {
     }
 
     /**
-     * Calculates distance matrix between all locations
+     * Calculates distance matrix between all locations using Google Maps API
      */
     private long[][] calculateDistanceMatrix(List<Mother> locations) {
         int size = locations.size();
         long[][] matrix = new long[size][size];
 
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (i == j) {
-                    matrix[i][j] = 0;
-                } else {
-                    // Calculate Haversine distance in meters
-                    double distance = calculateHaversineDistance(
-                        locations.get(i).getLatitude(),
-                        locations.get(i).getLongitude(),
-                        locations.get(j).getLatitude(),
-                        locations.get(j).getLongitude()
-                    );
-                    matrix[i][j] = Math.round(distance);
+        try {
+            // Convert Mother objects to NavigationLocation objects
+            List<NavigationLocation> navLocations = new ArrayList<>();
+            for (Mother mother : locations) {
+                NavigationLocation navLoc = NavigationLocation.builder()
+                    .latitude(mother.getLatitude())
+                    .longitude(mother.getLongitude())
+                    .name(mother.getName())
+                    .address(mother.getLocationAddress() != null ? mother.getLocationAddress() : mother.getAddress())
+                    .build();
+                navLocations.add(navLoc);
+            }
+
+            // Get travel time matrix from Google Maps
+            TravelTimeResult[][] travelMatrix = googleMapsDistanceService.getTravelTimeMatrix(navLocations);
+            
+            // Convert travel times to matrix format (in seconds for OR-Tools)
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    if (i == j) {
+                        matrix[i][j] = 0;
+                    } else if (travelMatrix[i][j] != null && travelMatrix[i][j].isValid()) {
+                        // Use duration in traffic if available, otherwise use regular duration
+                        long travelTimeSeconds = travelMatrix[i][j].getDurationInTrafficSeconds();
+                        matrix[i][j] = travelTimeSeconds;
+                        
+                        log.debug("Travel time from {} to {}: {} seconds ({} minutes)", 
+                                 locations.get(i).getName(), locations.get(j).getName(),
+                                 travelTimeSeconds, travelTimeSeconds / 60);
+                    } else {
+                        // Fallback to Haversine distance calculation
+                        double distance = calculateHaversineDistance(
+                            locations.get(i).getLatitude(),
+                            locations.get(i).getLongitude(),
+                            locations.get(j).getLatitude(),
+                            locations.get(j).getLongitude()
+                        );
+                        // Convert distance to estimated travel time (assume 25 km/h average speed)
+                        long estimatedSeconds = Math.round(distance / (25.0 * 1000 / 3600));
+                        matrix[i][j] = estimatedSeconds;
+                        
+                        log.debug("Using Haversine fallback from {} to {}: {} meters, {} seconds", 
+                                 locations.get(i).getName(), locations.get(j).getName(),
+                                 distance, estimatedSeconds);
+                    }
+                }
+            }
+
+            log.info("Successfully calculated distance matrix using Google Maps API for {} locations", size);
+            
+        } catch (Exception e) {
+            log.error("Error calculating distance matrix with Google Maps API, falling back to Haversine", e);
+            
+            // Complete fallback to Haversine calculation
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    if (i == j) {
+                        matrix[i][j] = 0;
+                    } else {
+                        double distance = calculateHaversineDistance(
+                            locations.get(i).getLatitude(),
+                            locations.get(i).getLongitude(),
+                            locations.get(j).getLatitude(),
+                            locations.get(j).getLongitude()
+                        );
+                        // Convert to travel time estimate
+                        long estimatedSeconds = Math.round(distance / (25.0 * 1000 / 3600));
+                        matrix[i][j] = estimatedSeconds;
+                    }
                 }
             }
         }
@@ -230,16 +293,19 @@ public class RouteOptimizationService {
             (long fromIndex, long toIndex) -> {
                 int fromNode = manager.indexToNode(fromIndex);
                 int toNode = manager.indexToNode(toIndex);
-                // Assume 30 minutes per visit + travel time based on distance
-                long travelTime = data.distanceMatrix[fromNode][toNode] / 500; // Convert distance to time estimate
-                return fromNode == toNode ? 0 : travelTime + 30; // 30 minutes service time
+                if (fromNode == toNode) {
+                    return 0;
+                }
+                // Use the real travel time from distance matrix (already in seconds)
+                // Add 30 minutes (1800 seconds) service time at each location
+                return data.distanceMatrix[fromNode][toNode] + 1800; // 30 minutes service time
             }
         );
 
         routing.addDimension(
             transitCallbackIndex,
-            30, // Allow waiting time of 30 minutes
-            24 * 60, // Maximum time per vehicle (24 hours in minutes)
+            1800, // Allow waiting time of 30 minutes (1800 seconds)
+            24 * 3600, // Maximum time per vehicle (24 hours in seconds)
             false, // Don't force start cumul to zero
             timeDimension
         );
@@ -249,17 +315,22 @@ public class RouteOptimizationService {
         // Add time window constraints for each location
         for (int i = 0; i < data.timeWindows.length; i++) {
             long index = manager.nodeToIndex(i);
-            timeDimensionObject.cumulVar(index).setRange(data.timeWindows[i][0], data.timeWindows[i][1]);
+            // Convert minutes to seconds for time windows
+            long startSeconds = data.timeWindows[i][0] * 60;
+            long endSeconds = data.timeWindows[i][1] * 60;
+            timeDimensionObject.cumulVar(index).setRange(startSeconds, endSeconds);
         }
 
         // Add time window constraints for start of routes
         for (int i = 0; i < data.vehicleNumber; i++) {
             long index = routing.start(i);
-            timeDimensionObject.cumulVar(index).setRange(
-                data.timeWindows[data.depot][0],
-                data.timeWindows[data.depot][1]
-            );
+            long startSeconds = data.timeWindows[data.depot][0] * 60;
+            long endSeconds = data.timeWindows[data.depot][1] * 60;
+            timeDimensionObject.cumulVar(index).setRange(startSeconds, endSeconds);
         }
+        
+        // Prioritize minimizing the total time
+        timeDimensionObject.setGlobalSpanCostCoefficient(100);
     }
 
     /**

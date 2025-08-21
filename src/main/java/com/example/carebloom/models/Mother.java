@@ -41,6 +41,6 @@ public class Mother {
         private String date; // ISO date string (YYYY-MM-DD)
         private String startTime; // HH:MM format
         private String endTime; // HH:MM format
-        private String status; // "new", "confirmed", "ongoing", "completed", "rescheduled"
+        private String status; // "new", "confirmed", "ordered", "ongoing", "completed", "rescheduled"
     }
 }
