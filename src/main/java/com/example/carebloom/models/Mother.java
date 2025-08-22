@@ -24,6 +24,11 @@ public class Mother {
     private String mohOfficeId; // Reference to MOHOffice table
     private String areaMidwifeId; // Reference to Midwife table
     private String recordNumber;
+    
+    // Geographic coordinates for route optimization
+    private Double latitude;
+    private Double longitude;
+    private String locationAddress; // Human-readable address for verification
 
     private String unitId;
     
@@ -36,6 +41,6 @@ public class Mother {
         private String date; // ISO date string (YYYY-MM-DD)
         private String startTime; // HH:MM format
         private String endTime; // HH:MM format
-        private String status; // "new", "confirmed", "ongoing", "completed", "rescheduled"
+        private String status; // "new", "confirmed", "ordered", "ongoing", "completed", "rescheduled"
     }
 }
