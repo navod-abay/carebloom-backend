@@ -18,7 +18,7 @@ public class EmailService {
         try {
             // Create action code settings for email link
             ActionCodeSettings actionCodeSettings = ActionCodeSettings.builder()
-                    .setUrl("http://localhost:5176/change-password?email=" + email) // Vendor frontend URL
+                    .setUrl("http://localhost:5176/set-password?email=" + email) // Vendor frontend URL
                     .setHandleCodeInApp(true)
                     .build();
 
