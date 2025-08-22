@@ -3,6 +3,7 @@ package com.example.carebloom.services.admin;
 import com.example.carebloom.dto.admin.PendingVendorResponse;
 import com.example.carebloom.models.Vendor;
 import com.example.carebloom.repositories.VendorRepository;
+import com.example.carebloom.services.admin.FirebaseUserService;
 import com.google.firebase.auth.UserRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -75,15 +76,21 @@ public class VendorManagementService {
         }
 
         try {
-            // Create Firebase user account for the vendor
+            // Create Firebase user account for the vendor (without password, for email link
+            // sign-in)
             createVendorFirebaseAccount(vendor);
 
             // Update vendor state to approved
             vendor.setState("approved");
             Vendor savedVendor = vendorRepository.save(vendor);
 
+            // Log that the vendor has been approved and Firebase account created
             logger.info("Vendor approved successfully with Firebase account: {} (UID: {})",
                     vendor.getEmail(), vendor.getFirebaseUid());
+
+            // Note: Email with sign-in link will be sent by frontend after this response
+            // Frontend should call Firebase Auth to generate and send sign-in link
+
             return mapToResponse(savedVendor);
 
         } catch (Exception e) {

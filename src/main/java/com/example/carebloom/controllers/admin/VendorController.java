@@ -71,18 +71,19 @@ public class VendorController {
     public ResponseEntity<?> approveVendor(@PathVariable String vendorId) {
         try {
             PendingVendorResponse approvedVendor = vendorManagementService.approveVendor(vendorId);
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "data", approvedVendor,
                     "message", "Vendor approved successfully"));
         } catch (RuntimeException e) {
             logger.error("Error approving vendor with ID: {}", vendorId, e);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
                             "success", false,
                             "error", e.getMessage()));
         } catch (Exception e) {
-            logger.error("Unexpected error approving vendor with ID: {}", vendorId, e);
+            logger.error("Internal error approving vendor with ID: {}", vendorId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
                             "success", false,
