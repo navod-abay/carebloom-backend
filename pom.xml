@@ -121,6 +121,7 @@
 				<configuration>
 					<version>1</version>
 					<projectId>GCLOUD_CONFIG</projectId>
+					<appEngineDirectory>${project.basedir}/src/main/appengine</appEngineDirectory>
 				</configuration>
 			</plugin>
 			
