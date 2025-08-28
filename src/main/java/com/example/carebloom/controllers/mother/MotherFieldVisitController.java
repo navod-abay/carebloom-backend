@@ -1,7 +1,9 @@
 package com.example.carebloom.controllers.mother;
 
 import com.example.carebloom.dto.mother.ConfirmFieldVisitTimeRequest;
+import com.example.carebloom.models.FieldVisit;
 import com.example.carebloom.models.Mother;
+import com.example.carebloom.models.Mother.FieldVisitAppointment;
 import com.example.carebloom.services.mother.MotherFieldVisitService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,11 +30,11 @@ public class MotherFieldVisitController {
      * @return Updated mother entity with confirmed field visit appointment
      */
     @PutMapping("/field-visit/confirm")
-    public ResponseEntity<Mother> confirmFieldVisitTime(@RequestBody ConfirmFieldVisitTimeRequest request) {
+    public ResponseEntity<FieldVisitAppointment> confirmFieldVisitTime(@RequestBody ConfirmFieldVisitTimeRequest request) {
         try {
             Mother updatedMother = motherFieldVisitService.confirmFieldVisitTime(request);
             logger.info("Field visit time confirmed successfully");
-            return ResponseEntity.ok(updatedMother);
+            return ResponseEntity.ok(updatedMother.getFieldVisitAppointment());
         } catch (ResponseStatusException e) {
             logger.error("Error confirming field visit time: {}", e.getReason());
             return ResponseEntity.status(e.getStatusCode()).build();
