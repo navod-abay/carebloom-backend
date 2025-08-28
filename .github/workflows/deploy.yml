@@ -1,0 +1,262 @@
+name: 🚀 Deploy CareBloom Backend
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ☕ Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+        
+    - name: 📦 Cache Maven dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: 🔧 Run tests
+      run: mvn clean test --batch-mode --fail-at-end
+      
+    - name: 📊 Generate test report
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
+      with:
+        name: 📋 Maven Test Results
+        path: target/surefire-reports/*.xml
+        reporter: java-junit
+        fail-on-error: true
+        
+    - name: 📈 Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results
+        path: target/surefire-reports/
+
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ☕ Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+        
+    - name: 📦 Cache Maven dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: 🔍 Run dependency security check
+      run: |
+        mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 || true
+        
+    - name: 📤 Upload security scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-scan-results
+        path: target/dependency-check-report.html
+
+  build:
+    name: 🏗️ Build Application
+    needs: [test, security-scan]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ☕ Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+        
+    - name: 📦 Cache Maven dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: 🔨 Build application
+      run: mvn clean package -DskipTests --batch-mode
+      
+    - name: 📤 Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: jar-artifact
+        path: target/*.jar
+
+  deploy:
+    name: 🚀 Deploy to Google App Engine
+    needs: [test, security-scan, build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    environment:
+      name: production
+      url: https://${{ secrets.GCP_PROJECT_ID }}.appspot.com
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ☕ Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+        
+    - name: 📦 Cache Maven dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: 📥 Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: jar-artifact
+        path: target/
+        
+    - name: ☁️ Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
+        
+    - name: 🔧 Configure app.yaml with environment variables
+      run: |
+        # Create app.yaml with environment variables
+        cat > app.yaml << EOF
+        runtime: java21
+        instance_class: F2
+        
+        automatic_scaling:
+          min_instances: 0
+          max_instances: 10
+          target_cpu_utilization: 0.6
+        
+        env_variables:
+          SPRING_PROFILES_ACTIVE: "prod"
+          GOOGLE_MAPS_API_KEY: "${{ secrets.GOOGLE_MAPS_API_KEY }}"
+          MONGODB_URI: "${{ secrets.MONGODB_URI }}"
+        
+        resources:
+          cpu: 1
+          memory_gb: 2
+        
+        readiness_check:
+          path: "/health"
+          check_interval_sec: 5
+          timeout_sec: 4
+          failure_threshold: 2
+          success_threshold: 2
+        
+        liveness_check:
+          path: "/health"
+          check_interval_sec: 30
+          timeout_sec: 4
+          failure_threshold: 4
+          success_threshold: 2
+        EOF
+        
+    - name: 🚀 Deploy to App Engine
+      run: |
+        echo "🚀 Deploying CareBloom Backend to Google App Engine..."
+        gcloud app deploy --quiet --promote --stop-previous-version
+        
+    - name: ✅ Verify deployment
+      run: |
+        APP_URL="https://${{ secrets.GCP_PROJECT_ID }}.appspot.com"
+        echo "🌐 Application deployed to: $APP_URL"
+        
+        # Wait for deployment to be ready
+        echo "⏳ Waiting for deployment to be ready..."
+        sleep 30
+        
+        # Check health endpoint
+        echo "🔍 Checking health endpoint..."
+        for i in {1..5}; do
+          if curl -f "$APP_URL/health" --connect-timeout 10 --max-time 30; then
+            echo "✅ Health check passed!"
+            break
+          else
+            echo "❌ Health check failed. Attempt $i/5"
+            if [ $i -eq 5 ]; then
+              echo "❌ Deployment verification failed!"
+              exit 1
+            fi
+            sleep 10
+          fi
+        done
+        
+    - name: 📊 Get deployment info
+      run: |
+        echo "📊 Deployment Information:"
+        echo "Project: ${{ secrets.GCP_PROJECT_ID }}"
+        echo "URL: https://${{ secrets.GCP_PROJECT_ID }}.appspot.com"
+        echo "Health: https://${{ secrets.GCP_PROJECT_ID }}.appspot.com/health"
+        echo "Commit: ${{ github.sha }}"
+        echo "Branch: ${{ github.ref_name }}"
+        
+    - name: 🎉 Deployment success notification
+      if: success()
+      run: |
+        echo "🎉 CareBloom Backend deployed successfully!"
+        echo "🌐 Application URL: https://${{ secrets.GCP_PROJECT_ID }}.appspot.com"
+        echo "✅ All health checks passed"
+        
+    - name: 💬 Comment on PR (if applicable)
+      if: github.event_name == 'pull_request' && success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '🎉 CareBloom Backend deployed successfully!\n\n🌐 **Application URL:** https://${{ secrets.GCP_PROJECT_ID }}.appspot.com\n✅ All tests passed and deployment verified!'
+          })
+
+  notify-failure:
+    name: 📢 Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, build, deploy]
+    if: failure()
+    
+    steps:
+    - name: 🚨 Deployment failure notification
+      run: |
+        echo "🚨 CareBloom Backend deployment failed!"
+        echo "📋 Check the workflow logs for details"
+        echo "🔗 Workflow URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

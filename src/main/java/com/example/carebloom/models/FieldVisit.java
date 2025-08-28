@@ -17,7 +17,7 @@ public class FieldVisit {
     private String startTime; // HH:MM format
     private String endTime; // HH:MM format
     private List<String> selectedMotherIds;
-    private String status; // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+    private String status; // SCHEDULED, CALCULATED,IN_PROGRESS, COMPLETED, CANCELLED
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
