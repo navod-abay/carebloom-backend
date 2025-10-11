@@ -38,8 +38,21 @@ public class Mother {
     private String profilePhotoUrl;
     private LocalDateTime profilePhotoUploadedAt;
     
+    // Notification fields
+    private String fcmToken;
+    private LocalDateTime fcmTokenUpdatedAt;
+    private NotificationPreferences notificationPreferences;
+    
     // Field visit appointment details
     private FieldVisitAppointment fieldVisitAppointment;
+    
+    @Data
+    public static class NotificationPreferences {
+        private Boolean emergencyAlerts = true; // Always true, cannot be disabled
+        private Boolean appUpdates = true;
+        private Boolean mohOfficeNotifications = true;
+        private Boolean trimesterUpdates = true;
+    }
     
     @Data
     public static class FieldVisitAppointment {
