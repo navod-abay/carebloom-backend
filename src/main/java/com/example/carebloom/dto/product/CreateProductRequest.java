@@ -30,10 +30,7 @@ public class CreateProductRequest {
     private String status = "active"; // default status
     
     private String description;
-    
-    @NotBlank(message = "Product image is required")
     private String imageUrl;
-    
     private String sku;
     private Double weight;
     private String dimensions;
