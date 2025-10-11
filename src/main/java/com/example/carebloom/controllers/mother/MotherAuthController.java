@@ -3,7 +3,7 @@ package com.example.carebloom.controllers.mother;
 import com.example.carebloom.dto.LocationRegistrationRequest;
 import com.example.carebloom.dto.PersonalRegistrationRequest;
 import com.example.carebloom.dto.RegistrationRequest;
-import com.example.carebloom.models.UserProfile;
+import com.example.carebloom.models.MotherProfile;
 import com.example.carebloom.services.AuthService;
 import com.example.carebloom.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +24,9 @@ public class MotherAuthController {
     private AuthService authService;
 
     @PostMapping("/verify")
-    public ResponseEntity<UserProfile> verifyToken(@RequestHeader("Authorization") String idToken) {
+    public ResponseEntity<MotherProfile> verifyToken(@RequestHeader("Authorization") String idToken) {
         try {
-            UserProfile profile = authService.verifyIdToken(idToken);
+            MotherProfile profile = authService.verifyIdToken(idToken);
             return ResponseEntity.ok(profile);
         } catch (Exception e) {
             logger.error("Token verification failed: {}", e.getMessage());
@@ -35,14 +35,14 @@ public class MotherAuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserProfile> registerMother(
+    public ResponseEntity<MotherProfile> registerMother(
             @RequestHeader("Authorization") String idToken,
             @RequestBody RegistrationRequest request) {
         try {
             logger.info("Starting mother registration process for email: {}", request.getEmail());
             logger.debug("Registration request received with token length: {}", idToken.length());
             
-            UserProfile profile = authService.registerMother(idToken, request.getEmail());
+            MotherProfile profile = authService.registerMother(idToken, request.getEmail());
             
             logger.info("Mother registration successful for email: {}, profile ID: {}", 
                        request.getEmail(), profile.getId());
@@ -59,11 +59,11 @@ public class MotherAuthController {
     }
     
     @PutMapping("/register/personal")
-    public ResponseEntity<UserProfile> registerPersonal(
+    public ResponseEntity<MotherProfile> registerPersonal(
             @RequestHeader("Authorization") String idToken,
             @RequestBody PersonalRegistrationRequest request) {
         try {
-            UserProfile profile = authService.updatePersonalInfo(idToken, request);
+            MotherProfile profile = authService.updatePersonalInfo(idToken, request);
             return ResponseEntity.ok(profile);
         } catch (IllegalArgumentException e) {
             logger.error("Invalid personal registration data: {}", e.getMessage());
@@ -75,7 +75,7 @@ public class MotherAuthController {
     }
     
     @PutMapping("/register/location")
-    public ResponseEntity<UserProfile> registerLocation(
+    public ResponseEntity<MotherProfile> registerLocation(
             @RequestHeader("Authorization") String idToken,
             @RequestBody LocationRegistrationRequest request) {
         try {
@@ -116,7 +116,7 @@ public class MotherAuthController {
                 }
             }
             
-            UserProfile profile = authService.updateLocation(idToken, request);
+            MotherProfile profile = authService.updateLocation(idToken, request);
             logger.info("Location registration successful for user: {}", profile.getId());
             return ResponseEntity.ok(profile);
         } catch (IllegalArgumentException e) {
@@ -129,10 +129,10 @@ public class MotherAuthController {
     }
 
     @PutMapping("/register/skip-location")
-    public ResponseEntity<UserProfile> skipLocation(
+    public ResponseEntity<MotherProfile> skipLocation(
             @RequestHeader("Authorization") String idToken) {
         try {
-            UserProfile profile = authService.skipLocation(idToken);
+            MotherProfile profile = authService.skipLocation(idToken);
             return ResponseEntity.ok(profile);
         } catch (Exception e) {
             logger.error("Skip location failed: {}", e.getMessage());
@@ -141,7 +141,7 @@ public class MotherAuthController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<UserProfile> getProfile() {
+    public ResponseEntity<MotherProfile> getProfile() {
         try {
             // Get Firebase UID from security context
             String firebaseUid = SecurityUtils.getCurrentFirebaseUid();
@@ -152,13 +152,13 @@ public class MotherAuthController {
 
             // Try to get user entity from security context first (no DB query needed)
             Object userEntity = SecurityUtils.getCurrentUserEntity();
-            if (userEntity instanceof UserProfile) {
+            if (userEntity instanceof MotherProfile) {
                 logger.info("Profile retrieved from security context for Firebase UID: {}", firebaseUid);
-                return ResponseEntity.ok((UserProfile) userEntity);
+                return ResponseEntity.ok((MotherProfile) userEntity);
             }
 
             // Fallback to service lookup if not in security context
-            UserProfile profile = authService.getProfileByFirebaseUid(firebaseUid);
+            MotherProfile profile = authService.getProfileByFirebaseUid(firebaseUid);
             if (profile == null) {
                 logger.debug("No profile found for Firebase UID: {}", firebaseUid);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();

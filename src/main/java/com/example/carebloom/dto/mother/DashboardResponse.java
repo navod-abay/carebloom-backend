@@ -8,12 +8,12 @@ import java.util.List;
 
 @Data
 public class DashboardResponse {
-    private UserProfile userProfile;
+    private MotherProfile MotherProfile;
     private List<HealthTip> healthTips;
     private List<Workshop> workshops;
 
     @Data
-    public static class UserProfile {
+    public static class MotherProfile {
         private String id;
         private String email;
         private String name;
@@ -22,8 +22,9 @@ public class DashboardResponse {
         private String address;
         private String district;
         private String recordNumber;
-        private String registrationStatus; // 'initial' | 'location_pending' | 'normal' | 'complete' | 'accepted'
+        private String registrationStatus; // 'initial' | 'location_pending' | 'photo_pending' | 'normal' | 'complete' | 'accepted'
         private String firebaseUid;
+        private String profilePhotoUrl;
         private MOHOfficeDto mohOffice;
         private MidwifeBasicDTO areaMidwife;
     }

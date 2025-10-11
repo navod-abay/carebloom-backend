@@ -3,7 +3,7 @@ package com.example.carebloom.services;
 import com.example.carebloom.dto.LocationRegistrationRequest;
 import com.example.carebloom.dto.PersonalRegistrationRequest;
 import com.example.carebloom.models.Mother;
-import com.example.carebloom.models.UserProfile;
+import com.example.carebloom.models.MotherProfile;
 import com.example.carebloom.repositories.MotherRepository;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
@@ -16,17 +16,19 @@ public class AuthService {
     @Autowired
     private MotherRepository motherRepository;
 
-    private UserProfile createUserProfile(Mother mother) {
-        UserProfile profile = new UserProfile();
+    private MotherProfile createMotherProfile(Mother mother) {
+        MotherProfile profile = new MotherProfile();
         profile.setId(mother.getId());
         profile.setName(mother.getName());
         profile.setEmail(mother.getEmail());
         profile.setRole("mother");
         profile.setRegistrationStatus(mother.getRegistrationStatus());
+        profile.setProfilePhotoUrl(mother.getProfilePhotoUrl());
+        profile.setDistrict(mother.getDistrict());
         return profile;
     }
 
-    public UserProfile verifyIdToken(String idToken) throws Exception {
+    public MotherProfile verifyIdToken(String idToken) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
         
@@ -35,10 +37,10 @@ public class AuthService {
             throw new RuntimeException("User not found");
         }
 
-        return createUserProfile(mother);
+        return createMotherProfile(mother);
     }
 
-    public UserProfile registerMother(String idToken, String email) throws Exception {
+    public MotherProfile registerMother(String idToken, String email) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
         
@@ -57,10 +59,10 @@ public class AuthService {
         // Save to MongoDB
         mother = motherRepository.save(mother);
         
-        return createUserProfile(mother);
+        return createMotherProfile(mother);
     }
     
-    public UserProfile skipLocation(String idToken) throws Exception {
+    public MotherProfile skipLocation(String idToken) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
         
@@ -75,10 +77,10 @@ public class AuthService {
         
         mother.setRegistrationStatus("normal");
         mother = motherRepository.save(mother);
-        return createUserProfile(mother);
+        return createMotherProfile(mother);
     }
 
-    public UserProfile updateLocation(String idToken, LocationRegistrationRequest request) throws Exception {
+    public MotherProfile updateLocation(String idToken, LocationRegistrationRequest request) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
         
@@ -87,7 +89,7 @@ public class AuthService {
             throw new RuntimeException("User not found");
         }
         
-        // Allow location update if status is location_pending or normal
+        // Allow location update if status is  or normal
         if (!"location_pending".equals(mother.getRegistrationStatus()) &&
             !"normal".equals(mother.getRegistrationStatus())) {
             throw new RuntimeException("Invalid registration step");
@@ -123,10 +125,10 @@ public class AuthService {
         mother.setRegistrationStatus("complete");
         
         mother = motherRepository.save(mother);
-        return createUserProfile(mother);
+        return createMotherProfile(mother);
     }
     
-    public UserProfile updatePersonalInfo(String idToken, PersonalRegistrationRequest request) throws Exception {
+    public MotherProfile updatePersonalInfo(String idToken, PersonalRegistrationRequest request) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
         
@@ -144,17 +146,17 @@ public class AuthService {
         mother.setDueDate(request.getDueDate());
         mother.setPhone(request.getPhone());
         mother.setAddress(request.getAddress());
-        mother.setRegistrationStatus("location_pending");
+        mother.setRegistrationStatus("picture");
         
         mother = motherRepository.save(mother);
-        return createUserProfile(mother);
+        return createMotherProfile(mother);
     }
     
-    public UserProfile getProfileByFirebaseUid(String firebaseUid) {
+    public MotherProfile getProfileByFirebaseUid(String firebaseUid) {
         Mother mother = motherRepository.findByFirebaseUid(firebaseUid);
         if (mother == null) {
             return null;
         }
-        return createUserProfile(mother);
+        return createMotherProfile(mother);
     }
 }
