@@ -108,6 +108,16 @@ public class GoogleMapsDistanceService {
      */
     public TravelTimeResult[][] getTravelTimeMatrix(List<NavigationLocation> locations) {
         int size = locations.size();
+        logger.info("=== GOOGLE MAPS DISTANCE MATRIX API CALL ===");
+        logger.info("Requesting travel time matrix for {} locations", size);
+        
+        // Log all locations
+        for (int i = 0; i < locations.size(); i++) {
+            NavigationLocation loc = locations.get(i);
+            logger.info("  Location {}: {} at ({}, {})", 
+                       i, loc.getName(), loc.getLatitude(), loc.getLongitude());
+        }
+        
         TravelTimeResult[][] matrix = new TravelTimeResult[size][size];
         
         // Initialize diagonal (same location) as zero
@@ -121,14 +131,25 @@ public class GoogleMapsDistanceService {
                 .fromCache(false)
                 .build();
         }
+        logger.debug("Initialized diagonal elements (same location) as zero travel time");
         
         try {
+            // Check API key availability
+            if (apiKey == null || apiKey.trim().isEmpty()) {
+                logger.error("Google Maps API key is not configured - falling back to Haversine calculation");
+                throw new RuntimeException("API key not available");
+            }
+            
             // Convert to LatLng array
             LatLng[] latLngs = locations.stream()
                 .map(loc -> new LatLng(loc.getLatitude(), loc.getLongitude()))
                 .toArray(LatLng[]::new);
+            logger.info("Converted {} locations to LatLng array", latLngs.length);
             
             // Make batch API call
+            logger.info("Making Google Maps Distance Matrix API call...");
+            long apiStartTime = System.currentTimeMillis();
+            
             DistanceMatrix distanceMatrix = DistanceMatrixApi.newRequest(context)
                 .origins(latLngs)
                 .destinations(latLngs)
@@ -136,36 +157,90 @@ public class GoogleMapsDistanceService {
                 .departureTime(java.time.Instant.now())
                 .await();
             
+            long apiEndTime = System.currentTimeMillis();
+            logger.info("Google Maps API call completed in {}ms", apiEndTime - apiStartTime);
+            
             // Parse results
             DistanceMatrixRow[] rows = distanceMatrix.rows;
+            logger.info("Processing {} rows from Google Maps response", rows.length);
+            
+            int validResults = 0;
+            int invalidResults = 0;
+            
             for (int i = 0; i < rows.length && i < size; i++) {
                 DistanceMatrixElement[] elements = rows[i].elements;
+                logger.debug("Processing row {} with {} elements", i, elements.length);
+                
                 for (int j = 0; j < elements.length && j < size; j++) {
                     if (i != j) { // Skip diagonal
-                        matrix[i][j] = parseDistanceMatrixElement(elements[j]);
+                        TravelTimeResult result = parseDistanceMatrixElement(elements[j]);
+                        matrix[i][j] = result;
+                        
+                        if (result.isValid()) {
+                            validResults++;
+                            logger.debug("Valid result from {} to {}: {} seconds, {} meters", 
+                                        locations.get(i).getName(), locations.get(j).getName(),
+                                        result.getDurationInTrafficSeconds(), result.getDistanceMeters());
+                        } else {
+                            invalidResults++;
+                            logger.warn("Invalid result from {} to {}: status = {}", 
+                                       locations.get(i).getName(), locations.get(j).getName(), 
+                                       result.getStatus());
+                        }
                         
                         // Cache individual results
                         String cacheKey = createCacheKey(locations.get(i), locations.get(j));
-                        if (matrix[i][j].isValid()) {
-                            cache.put(cacheKey, matrix[i][j]);
+                        if (result.isValid()) {
+                            cache.put(cacheKey, result);
+                            logger.debug("Cached result for key: {}", cacheKey);
                         }
                     }
                 }
             }
             
-            logger.info("Successfully retrieved travel time matrix for {} locations", size);
+            logger.info("Google Maps API results: {} valid, {} invalid", validResults, invalidResults);
             
         } catch (Exception e) {
-            logger.error("Error getting travel time matrix from Google Maps API", e);
+            logger.error("ERROR during Google Maps API call: {}", e.getMessage(), e);
+            logger.error("Exception details: ", e);
+            logger.warn("Falling back to Haversine calculation for missing entries");
             
             // Fallback to Haversine calculation for missing entries
+            int fallbackCount = 0;
             for (int i = 0; i < size; i++) {
                 for (int j = 0; j < size; j++) {
                     if (i != j && matrix[i][j] == null) {
                         matrix[i][j] = createFallbackResult(locations.get(i), locations.get(j));
+                        fallbackCount++;
+                        
+                        if (fallbackCount <= 5) { // Log first few fallbacks
+                            logger.debug("Haversine fallback from {} to {}: {} seconds", 
+                                        locations.get(i).getName(), locations.get(j).getName(),
+                                        matrix[i][j].getDurationInTrafficSeconds());
+                        }
                     }
                 }
             }
+            logger.warn("Created {} Haversine fallback results", fallbackCount);
+        }
+        
+        // Validate matrix completeness
+        int nullCount = 0;
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (matrix[i][j] == null) {
+                    nullCount++;
+                    logger.error("NULL result at matrix[{}][{}] - this should not happen!", i, j);
+                }
+            }
+        }
+        
+        if (nullCount == 0) {
+            logger.info("=== DISTANCE MATRIX COMPLETED SUCCESSFULLY ===");
+            logger.info("Matrix size: {}x{}, all entries populated", size, size);
+        } else {
+            logger.error("=== DISTANCE MATRIX COMPLETED WITH ERRORS ===");
+            logger.error("Matrix size: {}x{}, {} null entries found!", size, size, nullCount);
         }
         
         return matrix;

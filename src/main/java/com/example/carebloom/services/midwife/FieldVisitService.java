@@ -283,34 +283,64 @@ public class FieldVisitService {
      * Calculate optimal visit order for a field visit
      */
     public CalculateVisitOrderResponseDTO calculateVisitOrder(String fieldVisitId, CalculateVisitOrderDTO request) {
+        logger.info("=== CALCULATE VISIT ORDER STARTED ===");
+        logger.info("Field Visit ID: {}", fieldVisitId);
+        logger.info("Override Unconfirmed: {}", request.getOverrideUnconfirmed());
+        
         // Get current midwife from security context
         Midwife currentMidwife = SecurityUtils.getCurrentMidwife();
         if (currentMidwife == null) {
+            logger.error("ERROR: Midwife not found in security context");
             return createErrorResponse("Midwife not found in security context");
         }
+        logger.info("Current midwife: {} (ID: {})", currentMidwife.getName(), currentMidwife.getId());
 
         // Find the field visit
         FieldVisit fieldVisit = fieldVisitRepository.findById(fieldVisitId).orElse(null);
         if (fieldVisit == null) {
+            logger.error("ERROR: Field visit not found with ID: {}", fieldVisitId);
             return createErrorResponse("Field visit not found");
         }
+        logger.info("Field visit found: Date {}, Time {}-{}, Status: {}", 
+                   fieldVisit.getDate(), fieldVisit.getStartTime(), fieldVisit.getEndTime(), fieldVisit.getStatus());
 
         // Verify the field visit belongs to the current midwife
         if (!fieldVisit.getMidwifeId().equals(currentMidwife.getId())) {
+            logger.error("ERROR: Access denied - Field visit belongs to midwife ID: {}, current midwife ID: {}", 
+                        fieldVisit.getMidwifeId(), currentMidwife.getId());
             return createErrorResponse("Access denied: Field visit does not belong to current midwife");
         }
+        logger.info("Access verified: Field visit belongs to current midwife");
 
         // Get eligible mothers based on overrideUnconfirmed flag
+        logger.info("--- STEP 1: Getting eligible mothers ---");
         List<Mother> eligibleMothers = getEligibleMothers(fieldVisit, request.getOverrideUnconfirmed());
+        logger.info("Found {} eligible mothers out of {} selected mothers", 
+                   eligibleMothers.size(), fieldVisit.getSelectedMotherIds().size());
         
         if (eligibleMothers.isEmpty()) {
+            logger.warn("WARNING: No eligible mothers found for route calculation");
             return createErrorResponse("No eligible mothers found for route calculation");
         }
 
+        // Log eligible mothers
+        logger.info("Eligible mothers:");
+        for (int i = 0; i < eligibleMothers.size(); i++) {
+            Mother m = eligibleMothers.get(i);
+            String appointmentStatus = m.getFieldVisitAppointment() != null ? 
+                m.getFieldVisitAppointment().getStatus() : "N/A";
+            logger.info("  {}. {} (lat: {}, lon: {}, status: {})", 
+                       i + 1, m.getName(), m.getLatitude(), m.getLongitude(), appointmentStatus);
+        }
+
+        logger.info("--- STEP 2: Checking location data ---");
         // Check if all mothers have location data
         List<Mother> mothersWithLocation = eligibleMothers.stream()
             .filter(mother -> routeOptimizationService.hasValidCoordinates(mother))
             .collect(Collectors.toList());
+
+        logger.info("Location validation: {}/{} mothers have valid coordinates", 
+                   mothersWithLocation.size(), eligibleMothers.size());
 
         if (mothersWithLocation.isEmpty()) {
             // If no mothers have coordinates, use address-based simple ordering
@@ -319,10 +349,12 @@ public class FieldVisitService {
                 .collect(Collectors.toList());
                 
             if (mothersWithLocation.isEmpty()) {
+                logger.error("ERROR: No mothers with valid location data found");
                 return createErrorResponse("No mothers with valid location data found");
             }
             
-            logger.warn("No mothers with coordinates found, using address-based ordering");
+            logger.warn("No mothers with coordinates found, using address-based ordering for {} mothers", 
+                       mothersWithLocation.size());
             // Use simple time-based ordering as fallback
             List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder = calculateSimpleTimeBasedOrder(
                 mothersWithLocation, fieldVisit);
@@ -330,25 +362,42 @@ public class FieldVisitService {
         }
 
         if (mothersWithLocation.size() < eligibleMothers.size()) {
-            logger.warn("Some mothers missing coordinates. Processing {} out of {} mothers", 
+            logger.warn("WARNING: Some mothers missing coordinates. Processing {} out of {} mothers", 
                        mothersWithLocation.size(), eligibleMothers.size());
+            
+            // Log mothers without coordinates
+            eligibleMothers.stream()
+                .filter(m -> !routeOptimizationService.hasValidCoordinates(m))
+                .forEach(m -> logger.warn("  Missing coordinates: {} (lat: {}, lon: {})", 
+                               m.getName(), m.getLatitude(), m.getLongitude()));
         }
 
+        logger.info("--- STEP 3: Calling route optimization service ---");
         // Use RouteOptimizationService for optimal routing
         try {
             LocalTime startTime = LocalTime.parse(fieldVisit.getStartTime());
             LocalTime endTime = LocalTime.parse(fieldVisit.getEndTime());
+            logger.info("Optimization time window: {} - {}", startTime, endTime);
             
             List<Mother> optimizedOrder = routeOptimizationService.optimizeVisitOrder(
                 mothersWithLocation, startTime, endTime);
             
+            logger.info("--- STEP 4: Converting to response format ---");
             List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder = 
                 convertToVisitOrderResponse(optimizedOrder, fieldVisit);
             
-            return createSuccessResponse(visitOrder, fieldVisit);
+            logger.info("--- STEP 5: Creating success response ---");
+            CalculateVisitOrderResponseDTO response = createSuccessResponse(visitOrder, fieldVisit);
+            
+            logger.info("=== CALCULATE VISIT ORDER COMPLETED SUCCESSFULLY ===");
+            logger.info("Final visit order: {} mothers, total distance: {}m, total time: {}min", 
+                       response.getVisitOrder().size(), response.getTotalDistance(), response.getTotalEstimatedTime());
+            
+            return response;
             
         } catch (Exception e) {
-            logger.error("Error during route optimization, falling back to simple ordering", e);
+            logger.error("ERROR during route optimization: {}", e.getMessage(), e);
+            logger.warn("Falling back to simple ordering due to optimization error");
             List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder = calculateSimpleTimeBasedOrder(
                 mothersWithLocation, fieldVisit);
             return createSuccessResponse(visitOrder, fieldVisit);
@@ -359,26 +408,70 @@ public class FieldVisitService {
      * Get eligible mothers for route calculation
      */
     private List<Mother> getEligibleMothers(FieldVisit fieldVisit, Boolean overrideUnconfirmed) {
+        logger.info("Getting eligible mothers from {} selected mother IDs", fieldVisit.getSelectedMotherIds().size());
+        logger.info("Override unconfirmed appointments: {}", overrideUnconfirmed);
+        
         List<Mother> eligibleMothers = new ArrayList<>();
+        int foundMothers = 0;
+        int missingMothers = 0;
+        int confirmedCount = 0;
+        int newCount = 0;
+        int otherStatusCount = 0;
         
         for (String motherId : fieldVisit.getSelectedMotherIds()) {
+            logger.debug("Processing mother ID: {}", motherId);
             Mother mother = motherRepository.findById(motherId).orElse(null);
-            if (mother == null) continue;
+            if (mother == null) {
+                missingMothers++;
+                logger.warn("Mother not found with ID: {}", motherId);
+                continue;
+            }
+            foundMothers++;
 
             Mother.FieldVisitAppointment appointment = mother.getFieldVisitAppointment();
-            if (appointment == null || !fieldVisit.getId().equals(appointment.getVisitId())) {
+            if (appointment == null) {
+                logger.warn("Mother {} has no field visit appointment", mother.getName());
+                continue;
+            }
+            
+            if (!fieldVisit.getId().equals(appointment.getVisitId())) {
+                logger.warn("Mother {} appointment visit ID ({}) doesn't match field visit ID ({})", 
+                           mother.getName(), appointment.getVisitId(), fieldVisit.getId());
                 continue;
             }
 
             // Include mother based on status and override flag
             String status = appointment.getStatus();
-            boolean shouldInclude = "confirmed".equals(status) || 
-                                  ("new".equals(status) && Boolean.TRUE.equals(overrideUnconfirmed));
+            boolean shouldInclude = false;
+            
+            if ("confirmed".equals(status)) {
+                confirmedCount++;
+                shouldInclude = true;
+                logger.debug("Including {} - confirmed appointment", mother.getName());
+            } else if ("new".equals(status) && Boolean.TRUE.equals(overrideUnconfirmed)) {
+                newCount++;
+                shouldInclude = true;
+                logger.debug("Including {} - new appointment with override", mother.getName());
+            } else if ("new".equals(status)) {
+                logger.debug("Excluding {} - new appointment without override", mother.getName());
+            } else {
+                otherStatusCount++;
+                logger.debug("Excluding {} - status: {}", mother.getName(), status);
+            }
             
             if (shouldInclude) {
                 eligibleMothers.add(mother);
             }
         }
+        
+        logger.info("Eligible mothers summary:");
+        logger.info("  Total selected: {}", fieldVisit.getSelectedMotherIds().size());
+        logger.info("  Found in database: {}", foundMothers);
+        logger.info("  Missing from database: {}", missingMothers);
+        logger.info("  Confirmed appointments: {}", confirmedCount);
+        logger.info("  New appointments: {}", newCount);
+        logger.info("  Other status: {}", otherStatusCount);
+        logger.info("  Final eligible count: {}", eligibleMothers.size());
         
         return eligibleMothers;
     }
@@ -497,23 +590,36 @@ public class FieldVisitService {
      * Persist the calculated visit order to database
      */
     private void persistVisitOrder(List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder, FieldVisit fieldVisit) {
+        logger.info("=== PERSISTING VISIT ORDER TO DATABASE ===");
+        logger.info("Persisting visit order for {} mothers in field visit {}", visitOrder.size(), fieldVisit.getId());
+        
         try {
             // 1. Update FieldVisit status to CALCULATED and reorder selectedMotherIds
             List<String> orderedMotherIds = visitOrder.stream()
                 .map(CalculateVisitOrderResponseDTO.VisitOrder::getMotherId)
                 .collect(Collectors.toList());
             
+            logger.info("Updating FieldVisit status and reordering mother IDs");
+            logger.info("Original order: {}", fieldVisit.getSelectedMotherIds());
+            logger.info("Optimized order: {}", orderedMotherIds);
+            
             fieldVisit.setSelectedMotherIds(orderedMotherIds);
             fieldVisit.setStatus("CALCULATED");
             fieldVisit.setUpdatedAt(LocalDateTime.now());
             fieldVisitRepository.save(fieldVisit);
             
-            logger.info("Updated FieldVisit {} status to CALCULATED with ordered mothers: {}", 
-                       fieldVisit.getId(), orderedMotherIds);
+            logger.info("Updated FieldVisit {} status to CALCULATED with ordered mothers", fieldVisit.getId());
 
             // 2. Update each Mother's FieldVisitAppointment status to "ordered"
+            logger.info("Updating individual mother appointments to 'ordered' status");
+            int updatedCount = 0;
+            int errorCount = 0;
+            
             for (int i = 0; i < visitOrder.size(); i++) {
                 CalculateVisitOrderResponseDTO.VisitOrder order = visitOrder.get(i);
+                logger.debug("Processing mother {} ({}) - position {} in route", 
+                            order.getMotherId(), order.getMotherName(), i + 1);
+                
                 Mother mother = motherRepository.findById(order.getMotherId()).orElse(null);
                 
                 if (mother != null && mother.getFieldVisitAppointment() != null && 
@@ -521,6 +627,10 @@ public class FieldVisitService {
                     
                     // Update appointment with calculated times and ordered status
                     Mother.FieldVisitAppointment appointment = mother.getFieldVisitAppointment();
+                    String oldStatus = appointment.getStatus();
+                    String oldStartTime = appointment.getStartTime();
+                    String oldEndTime = appointment.getEndTime();
+                    
                     appointment.setStatus("ordered");
                     appointment.setStartTime(order.getEstimatedArrivalTime());
                     
@@ -530,16 +640,30 @@ public class FieldVisitService {
                     appointment.setEndTime(endTime);
                     
                     motherRepository.save(mother);
+                    updatedCount++;
                     
-                    logger.debug("Updated Mother {} appointment status to 'ordered', time slot: {} - {}", 
-                               mother.getId(), appointment.getStartTime(), appointment.getEndTime());
+                    logger.info("Updated Mother {} appointment:", mother.getName());
+                    logger.info("  Status: {} -> {}", oldStatus, appointment.getStatus());
+                    logger.info("  Time: {} - {} -> {} - {}", 
+                               oldStartTime, oldEndTime, appointment.getStartTime(), appointment.getEndTime());
+                    logger.info("  Position in route: {}", i + 1);
+                } else {
+                    errorCount++;
+                    logger.error("Failed to update Mother {}: mother={}, appointment={}, visitId match={}", 
+                                order.getMotherId(), 
+                                mother != null ? "found" : "not found",
+                                mother != null && mother.getFieldVisitAppointment() != null ? "exists" : "missing",
+                                mother != null && mother.getFieldVisitAppointment() != null ? 
+                                    fieldVisit.getId().equals(mother.getFieldVisitAppointment().getVisitId()) : "N/A");
                 }
             }
             
-            logger.info("Successfully updated {} mothers' appointment status to 'ordered'", visitOrder.size());
+            logger.info("Appointment updates completed: {} successful, {} errors", updatedCount, errorCount);
+            logger.info("=== VISIT ORDER PERSISTENCE COMPLETED SUCCESSFULLY ===");
             
         } catch (Exception e) {
-            logger.error("Error persisting visit order for FieldVisit {}: {}", fieldVisit.getId(), e.getMessage(), e);
+            logger.error("ERROR persisting visit order for FieldVisit {}: {}", fieldVisit.getId(), e.getMessage(), e);
+            logger.error("Persistence failed, but calculated order will still be returned to user");
             // Don't throw exception - we still want to return the calculated order even if persistence fails
         }
     }
