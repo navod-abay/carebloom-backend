@@ -7,7 +7,7 @@ import com.example.carebloom.dto.RegistrationRequest;
 import com.example.carebloom.dto.hospitals.HospitalDashboardDto;
 import com.example.carebloom.dto.moh_offices.MoHOfficeInfoDto;
 import com.example.carebloom.dto.midwives.AssignedMidwifeDto;
-import com.example.carebloom.models.UserProfile;
+import com.example.carebloom.models.MotherProfile;
 import com.example.carebloom.services.AuthService;
 import com.example.carebloom.services.mother.MotherHospitalService;
 import org.junit.jupiter.api.DisplayName;
@@ -44,10 +44,10 @@ class MotherControllersTest extends BaseControllerTest {
 
         @Test
         @DisplayName("Should verify valid mother token successfully")
-        void verifyToken_ValidToken_ReturnsUserProfile() throws Exception {
+        void verifyToken_ValidToken_ReturnsMotherProfile() throws Exception {
             // Arrange
             String token = "valid-firebase-token";
-            UserProfile profile = createMockUserProfile();
+            MotherProfile profile = createMockMotherProfile();
 
             when(authService.verifyIdToken(createBearerToken(token))).thenReturn(profile);
 
@@ -78,13 +78,13 @@ class MotherControllersTest extends BaseControllerTest {
 
         @Test
         @DisplayName("Should register mother successfully")
-        void registerMother_ValidRequest_ReturnsUserProfile() throws Exception {
+        void registerMother_ValidRequest_ReturnsMotherProfile() throws Exception {
             // Arrange
             String token = "valid-firebase-token";
             RegistrationRequest request = new RegistrationRequest();
             request.setEmail("mother@example.com");
             
-            UserProfile profile = createMockUserProfile();
+            MotherProfile profile = createMockMotherProfile();
             when(authService.registerMother(createBearerToken(token), request.getEmail()))
                 .thenReturn(profile);
 
@@ -119,14 +119,14 @@ class MotherControllersTest extends BaseControllerTest {
 
         @Test
         @DisplayName("Should update personal info successfully")
-        void registerPersonal_ValidRequest_ReturnsUserProfile() throws Exception {
+        void registerPersonal_ValidRequest_ReturnsMotherProfile() throws Exception {
             // Arrange
             String token = "valid-firebase-token";
             PersonalRegistrationRequest request = new PersonalRegistrationRequest();
             request.setName("Jane Doe");
             request.setDueDate("2024-12-01");
             
-            UserProfile profile = createMockUserProfile();
+            MotherProfile profile = createMockMotherProfile();
             when(authService.updatePersonalInfo(createBearerToken(token), request))
                 .thenReturn(profile);
 
@@ -141,14 +141,14 @@ class MotherControllersTest extends BaseControllerTest {
 
         @Test
         @DisplayName("Should update location successfully")
-        void registerLocation_ValidRequest_ReturnsUserProfile() throws Exception {
+        void registerLocation_ValidRequest_ReturnsMotherProfile() throws Exception {
             // Arrange
             String token = "valid-firebase-token";
             LocationRegistrationRequest request = new LocationRegistrationRequest();
             request.setDistrict("Colombo");
             request.setMohOfficeId("moh-office-123");
             
-            UserProfile profile = createMockUserProfile();
+            MotherProfile profile = createMockMotherProfile();
             when(authService.updateLocation(createBearerToken(token), request))
                 .thenReturn(profile);
 
@@ -163,10 +163,10 @@ class MotherControllersTest extends BaseControllerTest {
 
         @Test
         @DisplayName("Should skip location successfully")
-        void skipLocation_ValidRequest_ReturnsUserProfile() throws Exception {
+        void skipLocation_ValidRequest_ReturnsMotherProfile() throws Exception {
             // Arrange
             String token = "valid-firebase-token";
-            UserProfile profile = createMockUserProfile();
+            MotherProfile profile = createMockMotherProfile();
             when(authService.skipLocation(createBearerToken(token))).thenReturn(profile);
 
             // Act & Assert
@@ -182,7 +182,7 @@ class MotherControllersTest extends BaseControllerTest {
         void getProfile_AuthenticatedUser_ReturnsProfile() throws Exception {
             // Arrange
             String firebaseUid = "firebase-uid-123";
-            UserProfile profile = createMockUserProfile();
+            MotherProfile profile = createMockMotherProfile();
             
             // Mock SecurityContext
             Authentication authentication = mock(Authentication.class);
@@ -293,10 +293,10 @@ class MotherControllersTest extends BaseControllerTest {
     }
 
     /**
-     * Helper method to create a mock UserProfile for testing
+     * Helper method to create a mock MotherProfile for testing
      */
-    private UserProfile createMockUserProfile() {
-        UserProfile profile = new UserProfile();
+    private MotherProfile createMockMotherProfile() {
+        MotherProfile profile = new MotherProfile();
         profile.setId("user-id-123");
         profile.setEmail("mother@example.com");
         profile.setName("Jane Doe");

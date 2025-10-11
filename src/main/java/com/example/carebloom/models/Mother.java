@@ -4,6 +4,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @Document(collection = "mothers")
 public class Mother {
@@ -31,6 +33,10 @@ public class Mother {
     private String locationAddress; // Human-readable address for verification
 
     private String unitId;
+    
+    // Profile photo fields
+    private String profilePhotoUrl;
+    private LocalDateTime profilePhotoUploadedAt;
     
     // Field visit appointment details
     private FieldVisitAppointment fieldVisitAppointment;

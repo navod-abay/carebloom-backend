@@ -49,7 +49,7 @@ public class MotherDashboardService {
             DashboardResponse response = new DashboardResponse();
 
             // Build user profile from mother data
-            response.setUserProfile(buildUserProfile(mother));
+            response.setMotherProfile(buildMotherProfile(mother));
 
             // Get health tips (hints)
             response.setHealthTips(getHealthTips());
@@ -69,26 +69,27 @@ public class MotherDashboardService {
         }
     }
 
-    private DashboardResponse.UserProfile buildUserProfile(Mother mother) {
-        DashboardResponse.UserProfile userProfile = new DashboardResponse.UserProfile();
+    private DashboardResponse.MotherProfile buildMotherProfile(Mother mother) {
+        DashboardResponse.MotherProfile MotherProfile = new DashboardResponse.MotherProfile();
         
-        userProfile.setId(mother.getId());
-        userProfile.setEmail(mother.getEmail());
-        userProfile.setName(mother.getName());
-        userProfile.setDueDate(mother.getDueDate());
-        userProfile.setPhone(mother.getPhone());
-        userProfile.setAddress(mother.getAddress());
-        userProfile.setDistrict(mother.getDistrict());
-        userProfile.setRecordNumber(mother.getRecordNumber());
-        userProfile.setRegistrationStatus(mother.getRegistrationStatus());
-        userProfile.setFirebaseUid(mother.getFirebaseUid());
+        MotherProfile.setId(mother.getId());
+        MotherProfile.setEmail(mother.getEmail());
+        MotherProfile.setName(mother.getName());
+        MotherProfile.setDueDate(mother.getDueDate());
+        MotherProfile.setPhone(mother.getPhone());
+        MotherProfile.setAddress(mother.getAddress());
+        MotherProfile.setDistrict(mother.getDistrict());
+        MotherProfile.setRecordNumber(mother.getRecordNumber());
+        MotherProfile.setRegistrationStatus(mother.getRegistrationStatus());
+        MotherProfile.setFirebaseUid(mother.getFirebaseUid());
+        MotherProfile.setProfilePhotoUrl(mother.getProfilePhotoUrl());
 
         // Get MOH Office details
         if (mother.getMohOfficeId() != null) {
             try {
                 MOHOffice mohOffice = mohOfficeRepository.findByid(mother.getMohOfficeId());
                 if (mohOffice != null) {
-                    userProfile.setMohOffice(MOHOfficeDto.fromEntity(mohOffice));
+                    MotherProfile.setMohOffice(MOHOfficeDto.fromEntity(mohOffice));
                 }
             } catch (Exception e) {
                 logger.warn("Could not fetch MOH office details for mother: {}", mother.getId(), e);
@@ -106,14 +107,14 @@ public class MotherDashboardService {
                     midwifeDto.setName(midwife.getName());
                     midwifeDto.setPhone(midwife.getPhone());
                     midwifeDto.setEmail(midwife.getEmail());
-                    userProfile.setAreaMidwife(midwifeDto);
+                    MotherProfile.setAreaMidwife(midwifeDto);
                 }
             } catch (Exception e) {
                 logger.warn("Could not fetch midwife details for mother: {}", mother.getId(), e);
             }
         }
 
-        return userProfile;
+        return MotherProfile;
     }
 
     private List<DashboardResponse.HealthTip> getHealthTips() {
