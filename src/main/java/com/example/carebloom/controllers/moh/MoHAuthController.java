@@ -1,6 +1,6 @@
 package com.example.carebloom.controllers.moh;
 
-import com.example.carebloom.models.UserProfile;
+import com.example.carebloom.models.MotherProfile;
 import com.example.carebloom.models.MoHOfficeUser;
 import com.example.carebloom.models.MOHOffice;
 import com.example.carebloom.repositories.MoHOfficeUserRepository;
@@ -49,7 +49,7 @@ public class MoHAuthController {
             }
 
             // Create and return user profile
-            UserProfile profile = new UserProfile();
+            MotherProfile profile = new MotherProfile();
             profile.setId(mohUser.getId());
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
@@ -105,7 +105,7 @@ public class MoHAuthController {
             }
 
             // Create and return user profile
-            UserProfile profile = new UserProfile();
+            MotherProfile profile = new MotherProfile();
             profile.setId(mohUser.getId());
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
@@ -156,7 +156,7 @@ public class MoHAuthController {
             }
 
             // Create user profile
-            UserProfile profile = new UserProfile();
+            MotherProfile profile = new MotherProfile();
             profile.setId(mohUser.getId());
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
@@ -210,7 +210,7 @@ public class MoHAuthController {
             }
 
             // Create and return user profile
-            UserProfile profile = new UserProfile();
+            MotherProfile profile = new MotherProfile();
             profile.setId(mohUser.getId());
             profile.setName(mohUser.getName());
             profile.setEmail(mohUser.getEmail());
