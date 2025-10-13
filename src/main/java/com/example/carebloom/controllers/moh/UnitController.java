@@ -4,6 +4,7 @@ import com.example.carebloom.models.Unit;
 import com.example.carebloom.repositories.UnitRepository;
 import com.example.carebloom.services.moh.UnitService;
 import com.example.carebloom.dto.unit.AssignMidwifeRequest;
+import com.example.carebloom.dto.unit.ReassignMidwifeRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,11 +23,9 @@ public class UnitController {
     @Autowired
     private UnitRepository unitRepository;
 
-
     @PostMapping("/unit")
     public ResponseEntity<Unit> createUnit(
-            @RequestBody Unit request
-    ) {
+            @RequestBody Unit request) {
         Unit created = unitService.createUnit(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -36,8 +35,6 @@ public class UnitController {
         List<Unit> units = unitRepository.findByMohOfficeId(mohOfficeId);
         return ResponseEntity.ok(units);
     }
-
-
 
     @DeleteMapping("/unit/{unitId}")
     public ResponseEntity<Void> deleteUnit(@PathVariable String unitId) {
@@ -49,14 +46,23 @@ public class UnitController {
     }
 
     @PostMapping("/unit/{unitId}/assign-midwife")
-    public ResponseEntity<Unit> assignMidwifeToUnit(@PathVariable String unitId, @RequestBody AssignMidwifeRequest request) {
+    public ResponseEntity<Unit> assignMidwifeToUnit(@PathVariable String unitId,
+            @RequestBody AssignMidwifeRequest request) {
         Unit updatedUnit = unitService.assignMidwifeToUnit(unitId, request.getMidwifeId());
         return ResponseEntity.ok(updatedUnit);
     }
 
     @PostMapping("/unit/{unitId}/unassign-midwife")
-    public ResponseEntity<Unit> unassignMidwifeFromUnit(@PathVariable String unitId, @RequestBody AssignMidwifeRequest request) {
+    public ResponseEntity<Unit> unassignMidwifeFromUnit(@PathVariable String unitId,
+            @RequestBody AssignMidwifeRequest request) {
         Unit updatedUnit = unitService.unassignMidwifeFromUnit(unitId, request.getMidwifeId());
+        return ResponseEntity.ok(updatedUnit);
+    }
+
+    @PostMapping("/unit/{unitId}/reassign-midwife")
+    public ResponseEntity<Unit> reassignMidwifeToUnit(@PathVariable String unitId,
+            @RequestBody ReassignMidwifeRequest request) {
+        Unit updatedUnit = unitService.reassignMidwifeToUnit(unitId, request.getNewMidwifeId());
         return ResponseEntity.ok(updatedUnit);
     }
 }

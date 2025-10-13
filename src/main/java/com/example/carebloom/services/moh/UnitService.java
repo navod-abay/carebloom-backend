@@ -80,4 +80,39 @@ public class UnitService {
         midwifeRepository.save(midwife);
         return unitRepository.save(unit);
     }
+
+    @Transactional
+    public Unit reassignMidwifeToUnit(String unitId, String newMidwifeId) {
+        Unit unit = unitRepository.findById(unitId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unit not found"));
+        Midwife newMidwife = midwifeRepository.findById(newMidwifeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "New midwife not found"));
+
+        String oldMidwifeId = unit.getAssignedMidwifeId();
+
+        if (oldMidwifeId != null) {
+            if (oldMidwifeId.equals(newMidwifeId)) {
+                return unit; // No change needed
+            }
+            Midwife oldMidwife = midwifeRepository.findById(oldMidwifeId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not find previously assigned midwife"));
+
+            if (oldMidwife.getAssignedUnitIds() != null) {
+                oldMidwife.getAssignedUnitIds().remove(unitId);
+                midwifeRepository.save(oldMidwife);
+            }
+        }
+
+        unit.setAssignedMidwifeId(newMidwifeId);
+
+        if (newMidwife.getAssignedUnitIds() == null) {
+            newMidwife.setAssignedUnitIds(new ArrayList<>());
+        }
+        if (!newMidwife.getAssignedUnitIds().contains(unitId)) {
+            newMidwife.getAssignedUnitIds().add(unitId);
+        }
+
+        midwifeRepository.save(newMidwife);
+        return unitRepository.save(unit);
+    }
 }
