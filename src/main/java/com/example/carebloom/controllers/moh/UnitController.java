@@ -38,14 +38,6 @@ public class UnitController {
     }
 
 
-    @PutMapping("/unit/{unitId}")
-    public ResponseEntity<Unit> updateUnit(@PathVariable String unitId, @RequestBody Unit request) {
-        Unit updated = unitService.updateUnit(unitId, request);
-        if (updated == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(updated);
-    }
 
     @DeleteMapping("/unit/{unitId}")
     public ResponseEntity<Void> deleteUnit(@PathVariable String unitId) {
