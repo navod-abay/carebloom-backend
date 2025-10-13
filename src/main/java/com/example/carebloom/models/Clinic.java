@@ -15,10 +15,14 @@ public class Clinic {
     private String userId; // ID of the user who created this clinic
     private String mohOfficeId; // ID of the user who created this clinic
     private String title;
+    private String description;
     private String date; // YYYY-MM-DD format
     private String startTime;
+    private String endTime;
+    private String doctorTitle;
     private String doctorName;
     private String location;
+    private String venue;
     private boolean isActive = true;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -34,4 +38,9 @@ public class Clinic {
     
     // Optional: List of unit IDs to assign this clinic to
     private List<String> unitIds = new ArrayList<>();
+    
+    // Queue-related fields
+    private List<AddedMother> addedMothers = new ArrayList<>();
+    private String queueStatus; // open, closed, completed
+    private QueueSettings queueSettings;
 }
