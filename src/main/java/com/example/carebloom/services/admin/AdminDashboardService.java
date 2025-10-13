@@ -1,0 +1,253 @@
+package com.example.carebloom.services.admin;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.example.carebloom.repositories.MotherRepository;
+
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class AdminDashboardService {
+    private static final Logger logger = LoggerFactory.getLogger(AdminDashboardService.class);
+
+    @Autowired
+    private MotherRepository motherRepository;
+
+    /**
+     * Get total count of mothers with accepted registration statuses
+     */
+    public long getTotalMothersCount() {
+        return motherRepository.totalMothersCount();
+    }
+
+    /**
+     * Get year-wise comparison of mother registrations with monthly breakdown
+     */
+    public YearlyComparisonStats getYearlyComparison() {
+        int currentYear = LocalDateTime.now().getYear();
+        int previousYear = currentYear - 1;
+
+        // Get monthly breakdown for current year
+        List<MonthlyData> currentYearMonths = new ArrayList<>();
+        long currentYearTotal = 0;
+        
+        for (int month = 1; month <= 12; month++) {
+            LocalDateTime monthStart = LocalDateTime.of(currentYear, month, 1, 0, 0, 0);
+            LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
+            
+            long monthCount = motherRepository.countByAcceptedStatusesAndCreatedAtBetween(monthStart, monthEnd);
+            currentYearMonths.add(new MonthlyData(Month.of(month).name(), monthCount));
+            currentYearTotal += monthCount;
+        }
+
+        // Get monthly breakdown for previous year
+        List<MonthlyData> previousYearMonths = new ArrayList<>();
+        long previousYearTotal = 0;
+        
+        for (int month = 1; month <= 12; month++) {
+            LocalDateTime monthStart = LocalDateTime.of(previousYear, month, 1, 0, 0, 0);
+            LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
+            
+            long monthCount = motherRepository.countByAcceptedStatusesAndCreatedAtBetween(monthStart, monthEnd);
+            previousYearMonths.add(new MonthlyData(Month.of(month).name(), monthCount));
+            previousYearTotal += monthCount;
+        }
+
+        logger.info("Yearly comparison - Current year ({}): {}, Previous year ({}): {}",
+                currentYear, currentYearTotal, previousYear, previousYearTotal);
+
+        return new YearlyComparisonStats(currentYear, currentYearMonths, currentYearTotal, 
+                                       previousYear, previousYearMonths, previousYearTotal);
+    }
+
+    /**
+     * Get monthly comparison of mother registrations with daily breakdown
+     */
+    public MonthlyComparisonStats getMonthlyComparison() {
+        LocalDateTime now = LocalDateTime.now();
+        int currentYear = now.getYear();
+        int currentMonth = now.getMonthValue();
+
+        // Current month: First day to last day
+        LocalDateTime currentMonthStart = LocalDateTime.of(currentYear, currentMonth, 1, 0, 0, 0);
+        
+        // Get daily breakdown for current month
+        List<DailyData> currentMonthDays = new ArrayList<>();
+        long currentMonthTotal = 0;
+        int daysInCurrentMonth = currentMonthStart.toLocalDate().lengthOfMonth();
+        
+        for (int day = 1; day <= daysInCurrentMonth; day++) {
+            LocalDateTime dayStart = LocalDateTime.of(currentYear, currentMonth, day, 0, 0, 0);
+            LocalDateTime dayEnd = LocalDateTime.of(currentYear, currentMonth, day, 23, 59, 59);
+            
+            long dayCount = motherRepository.countByAcceptedStatusesAndCreatedAtBetween(dayStart, dayEnd);
+            currentMonthDays.add(new DailyData(day, dayCount));
+            currentMonthTotal += dayCount;
+        }
+
+        // Previous month
+        LocalDateTime previousMonthStart = currentMonthStart.minusMonths(1);
+        
+        // Get daily breakdown for previous month
+        List<DailyData> previousMonthDays = new ArrayList<>();
+        long previousMonthTotal = 0;
+        int daysInPreviousMonth = previousMonthStart.toLocalDate().lengthOfMonth();
+        
+        for (int day = 1; day <= daysInPreviousMonth; day++) {
+            LocalDateTime dayStart = LocalDateTime.of(previousMonthStart.getYear(), previousMonthStart.getMonthValue(), day, 0, 0, 0);
+            LocalDateTime dayEnd = LocalDateTime.of(previousMonthStart.getYear(), previousMonthStart.getMonthValue(), day, 23, 59, 59);
+            
+            long dayCount = motherRepository.countByAcceptedStatusesAndCreatedAtBetween(dayStart, dayEnd);
+            previousMonthDays.add(new DailyData(day, dayCount));
+            previousMonthTotal += dayCount;
+        }
+
+        String currentMonthName = now.getMonth().name();
+        String previousMonthName = previousMonthStart.getMonth().name();
+
+        logger.info("Monthly comparison - Current month ({}): {}, Previous month ({}): {}",
+                currentMonthName, currentMonthTotal, previousMonthName, previousMonthTotal);
+
+        return new MonthlyComparisonStats(currentMonthName, currentMonthDays, currentMonthTotal,
+                                        previousMonthName, previousMonthDays, previousMonthTotal);
+    }
+
+    /**
+     * Get complete dashboard statistics
+     */
+    public DashboardStats getCompleteStats() {
+        long totalCount = getTotalMothersCount();
+        YearlyComparisonStats yearlyStats = getYearlyComparison();
+        MonthlyComparisonStats monthlyStats = getMonthlyComparison();
+
+        return new DashboardStats(totalCount, yearlyStats, monthlyStats);
+    }
+
+    // Inner classes for response DTOs
+    public static class YearlyComparisonStats {
+        private int currentYear;
+        private List<MonthlyData> currentYearMonths;
+        private long currentYearTotal;
+        private int previousYear;
+        private List<MonthlyData> previousYearMonths;
+        private long previousYearTotal;
+        private long difference;
+        private double percentageChange;
+
+        public YearlyComparisonStats(int currentYear, List<MonthlyData> currentYearMonths, long currentYearTotal,
+                                   int previousYear, List<MonthlyData> previousYearMonths, long previousYearTotal) {
+            this.currentYear = currentYear;
+            this.currentYearMonths = currentYearMonths;
+            this.currentYearTotal = currentYearTotal;
+            this.previousYear = previousYear;
+            this.previousYearMonths = previousYearMonths;
+            this.previousYearTotal = previousYearTotal;
+            this.difference = currentYearTotal - previousYearTotal;
+            this.percentageChange = previousYearTotal > 0 ? ((double) difference / previousYearTotal) * 100 : 0;
+        }
+
+        // Getters
+        public int getCurrentYear() { return currentYear; }
+        public List<MonthlyData> getCurrentYearMonths() { return currentYearMonths; }
+        public long getCurrentYearTotal() { return currentYearTotal; }
+        public int getPreviousYear() { return previousYear; }
+        public List<MonthlyData> getPreviousYearMonths() { return previousYearMonths; }
+        public long getPreviousYearTotal() { return previousYearTotal; }
+        public long getDifference() { return difference; }
+        public double getPercentageChange() { return percentageChange; }
+    }
+
+    public static class MonthlyComparisonStats {
+        private String currentMonth;
+        private List<DailyData> currentMonthDays;
+        private long currentMonthTotal;
+        private String previousMonth;
+        private List<DailyData> previousMonthDays;
+        private long previousMonthTotal;
+        private long difference;
+        private double percentageChange;
+
+        public MonthlyComparisonStats(String currentMonth, List<DailyData> currentMonthDays, long currentMonthTotal,
+                                    String previousMonth, List<DailyData> previousMonthDays, long previousMonthTotal) {
+            this.currentMonth = currentMonth;
+            this.currentMonthDays = currentMonthDays;
+            this.currentMonthTotal = currentMonthTotal;
+            this.previousMonth = previousMonth;
+            this.previousMonthDays = previousMonthDays;
+            this.previousMonthTotal = previousMonthTotal;
+            this.difference = currentMonthTotal - previousMonthTotal;
+            this.percentageChange = previousMonthTotal > 0 ? ((double) difference / previousMonthTotal) * 100 : 0;
+        }
+
+        // Getters
+        public String getCurrentMonth() { return currentMonth; }
+        public List<DailyData> getCurrentMonthDays() { return currentMonthDays; }
+        public long getCurrentMonthTotal() { return currentMonthTotal; }
+        public String getPreviousMonth() { return previousMonth; }
+        public List<DailyData> getPreviousMonthDays() { return previousMonthDays; }
+        public long getPreviousMonthTotal() { return previousMonthTotal; }
+        public long getDifference() { return difference; }
+        public double getPercentageChange() { return percentageChange; }
+    }
+
+    public static class DashboardStats {
+        private long totalMothersCount;
+        private YearlyComparisonStats yearlyComparison;
+        private MonthlyComparisonStats monthlyComparison;
+
+        public DashboardStats(long totalMothersCount, YearlyComparisonStats yearlyComparison,
+                MonthlyComparisonStats monthlyComparison) {
+            this.totalMothersCount = totalMothersCount;
+            this.yearlyComparison = yearlyComparison;
+            this.monthlyComparison = monthlyComparison;
+        }
+
+        // Getters
+        public long getTotalMothersCount() {
+            return totalMothersCount;
+        }
+
+        public YearlyComparisonStats getYearlyComparison() {
+            return yearlyComparison;
+        }
+
+        public MonthlyComparisonStats getMonthlyComparison() {
+            return monthlyComparison;
+        }
+    }
+
+    // Helper classes for detailed data
+    public static class MonthlyData {
+        private String month;
+        private long count;
+
+        public MonthlyData(String month, long count) {
+            this.month = month;
+            this.count = count;
+        }
+
+        // Getters
+        public String getMonth() { return month; }
+        public long getCount() { return count; }
+    }
+
+    public static class DailyData {
+        private int day;
+        private long count;
+
+        public DailyData(int day, long count) {
+            this.day = day;
+            this.count = count;
+        }
+
+        // Getters
+        public int getDay() { return day; }
+        public long getCount() { return count; }
+    }
+}
