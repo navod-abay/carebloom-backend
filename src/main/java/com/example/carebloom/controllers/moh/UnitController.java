@@ -3,6 +3,7 @@ package com.example.carebloom.controllers.moh;
 import com.example.carebloom.models.Unit;
 import com.example.carebloom.repositories.UnitRepository;
 import com.example.carebloom.services.moh.UnitService;
+import com.example.carebloom.dto.unit.AssignMidwifeRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -53,5 +54,17 @@ public class UnitController {
         }
         unitRepository.deleteById(unitId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/unit/{unitId}/assign-midwife")
+    public ResponseEntity<Unit> assignMidwifeToUnit(@PathVariable String unitId, @RequestBody AssignMidwifeRequest request) {
+        Unit updatedUnit = unitService.assignMidwifeToUnit(unitId, request.getMidwifeId());
+        return ResponseEntity.ok(updatedUnit);
+    }
+
+    @PostMapping("/unit/{unitId}/unassign-midwife")
+    public ResponseEntity<Unit> unassignMidwifeFromUnit(@PathVariable String unitId, @RequestBody AssignMidwifeRequest request) {
+        Unit updatedUnit = unitService.unassignMidwifeFromUnit(unitId, request.getMidwifeId());
+        return ResponseEntity.ok(updatedUnit);
     }
 }
