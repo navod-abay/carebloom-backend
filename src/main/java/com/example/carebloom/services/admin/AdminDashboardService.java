@@ -389,7 +389,8 @@ public class AdminDashboardService {
 
         String monthName = now.getMonth().name();
 
-        logger.info("Monthly MOH office district-wise registrations for {} - {} districts found", monthName, districtCounts.size());
+        logger.info("Monthly MOH office district-wise registrations for {} - {} districts found", monthName,
+                districtCounts.size());
 
         return new DistrictWiseTotals(monthName + " " + currentYear, districtCounts);
     }
@@ -423,7 +424,8 @@ public class AdminDashboardService {
             }
         }
 
-        logger.info("Yearly MOH office district-wise registrations for {} - {} districts found", currentYear, districtCounts.size());
+        logger.info("Yearly MOH office district-wise registrations for {} - {} districts found", currentYear,
+                districtCounts.size());
 
         return new DistrictWiseTotals(String.valueOf(currentYear), districtCounts);
     }

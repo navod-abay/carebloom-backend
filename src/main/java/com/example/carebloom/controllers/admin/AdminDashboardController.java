@@ -156,12 +156,14 @@ public class AdminDashboardController {
     }
 
     /**
-     * Get monthly MOH office district-wise registrations (count of MOH offices by district for current month)
+     * Get monthly MOH office district-wise registrations (count of MOH offices by
+     * district for current month)
      */
     @GetMapping("/month-admin-mohoffices-districtwise-registrations")
     public ResponseEntity<AdminDashboardService.DistrictWiseTotals> getMonthlyMOHOfficeDistrictWiseRegistrations() {
         try {
-            AdminDashboardService.DistrictWiseTotals stats = dashboardService.getMonthlyMOHOfficeDistrictWiseRegistrations();
+            AdminDashboardService.DistrictWiseTotals stats = dashboardService
+                    .getMonthlyMOHOfficeDistrictWiseRegistrations();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -169,12 +171,14 @@ public class AdminDashboardController {
     }
 
     /**
-     * Get yearly MOH office district-wise registrations (count of MOH offices by district for current year)
+     * Get yearly MOH office district-wise registrations (count of MOH offices by
+     * district for current year)
      */
     @GetMapping("/year-admin-mohoffices-districtwise-registrations")
     public ResponseEntity<AdminDashboardService.DistrictWiseTotals> getYearlyMOHOfficeDistrictWiseRegistrations() {
         try {
-            AdminDashboardService.DistrictWiseTotals stats = dashboardService.getYearlyMOHOfficeDistrictWiseRegistrations();
+            AdminDashboardService.DistrictWiseTotals stats = dashboardService
+                    .getYearlyMOHOfficeDistrictWiseRegistrations();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
