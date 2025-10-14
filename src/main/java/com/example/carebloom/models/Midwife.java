@@ -1,6 +1,8 @@
 package com.example.carebloom.models;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import java.time.LocalDateTime;
@@ -14,39 +16,39 @@ import lombok.Data;
 public class Midwife {
     @Id
     private String id;
-    
+
     @Field("office_id")
     private String officeId;
-    
+
     @Field("firebase_uid")
     private String firebaseUid;
-    
+
     @Field("name")
     private String name;
-    
+
     @Field("phone")
     private String phone;
-    
+
     @Field("email")
     private String email;
-    
+
     @Field("state")
     private String state = "pending";
-    
-    @Field("created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
-    
-    @Field("updated_at")
-    private LocalDateTime updatedAt = LocalDateTime.now();
 
-    
+    @CreatedDate
+    @Field("created_at")
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @Field("updated_at")
+    private LocalDateTime updatedAt;
+
     @Field("assigned_mother_ids")
     private List<String> assignedMotherIds = new ArrayList<>();
-    
+
     @Field("assigned_unit_ids")
     private List<String> assignedUnitIds = new ArrayList<>();
 
-  
     // Helper methods for assigned mothers
     public void addAssignedMother(String motherId) {
         if (this.assignedMotherIds == null) {
@@ -74,5 +76,5 @@ public class Midwife {
             this.assignedUnitIds.remove(unitId);
         }
     }
-    
+
 }

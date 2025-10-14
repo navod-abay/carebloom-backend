@@ -184,4 +184,32 @@ public class AdminDashboardController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    /**
+     * Get monthly midwife registrations with daily breakdown (current month vs
+     * previous month)
+     */
+    @GetMapping("/month-admin-midwives-registrations")
+    public ResponseEntity<AdminDashboardService.MidwifeRegistrationStats> getMonthlyMidwifeRegistrations() {
+        try {
+            AdminDashboardService.MidwifeRegistrationStats stats = dashboardService.getMonthlyMidwifeRegistrations();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get yearly midwife registrations with monthly breakdown (current year vs
+     * previous year)
+     */
+    @GetMapping("/year-admin-midwives-registrations")
+    public ResponseEntity<AdminDashboardService.MidwifeYearlyStats> getYearlyMidwifeRegistrations() {
+        try {
+            AdminDashboardService.MidwifeYearlyStats stats = dashboardService.getYearlyMidwifeRegistrations();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }
