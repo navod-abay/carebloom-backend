@@ -36,11 +36,11 @@ public class AdminDashboardService {
         // Get monthly breakdown for current year
         List<MonthlyData> currentYearMonths = new ArrayList<>();
         long currentYearTotal = 0;
-        
+
         for (int month = 1; month <= 12; month++) {
             LocalDateTime monthStart = LocalDateTime.of(currentYear, month, 1, 0, 0, 0);
             LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
-            
+
             long monthCount = motherRepository.countByAcceptedStatusesAndCreatedAtBetween(monthStart, monthEnd);
             currentYearMonths.add(new MonthlyData(Month.of(month).name(), monthCount));
             currentYearTotal += monthCount;
@@ -49,11 +49,11 @@ public class AdminDashboardService {
         // Get monthly breakdown for previous year
         List<MonthlyData> previousYearMonths = new ArrayList<>();
         long previousYearTotal = 0;
-        
+
         for (int month = 1; month <= 12; month++) {
             LocalDateTime monthStart = LocalDateTime.of(previousYear, month, 1, 0, 0, 0);
             LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
-            
+
             long monthCount = motherRepository.countByAcceptedStatusesAndCreatedAtBetween(monthStart, monthEnd);
             previousYearMonths.add(new MonthlyData(Month.of(month).name(), monthCount));
             previousYearTotal += monthCount;
@@ -62,8 +62,8 @@ public class AdminDashboardService {
         logger.info("Yearly comparison - Current year ({}): {}, Previous year ({}): {}",
                 currentYear, currentYearTotal, previousYear, previousYearTotal);
 
-        return new YearlyComparisonStats(currentYear, currentYearMonths, currentYearTotal, 
-                                       previousYear, previousYearMonths, previousYearTotal);
+        return new YearlyComparisonStats(currentYear, currentYearMonths, currentYearTotal,
+                previousYear, previousYearMonths, previousYearTotal);
     }
 
     /**
@@ -76,16 +76,16 @@ public class AdminDashboardService {
 
         // Current month: First day to last day
         LocalDateTime currentMonthStart = LocalDateTime.of(currentYear, currentMonth, 1, 0, 0, 0);
-        
+
         // Get daily breakdown for current month
         List<DailyData> currentMonthDays = new ArrayList<>();
         long currentMonthTotal = 0;
         int daysInCurrentMonth = currentMonthStart.toLocalDate().lengthOfMonth();
-        
+
         for (int day = 1; day <= daysInCurrentMonth; day++) {
             LocalDateTime dayStart = LocalDateTime.of(currentYear, currentMonth, day, 0, 0, 0);
             LocalDateTime dayEnd = LocalDateTime.of(currentYear, currentMonth, day, 23, 59, 59);
-            
+
             long dayCount = motherRepository.countByAcceptedStatusesAndCreatedAtBetween(dayStart, dayEnd);
             currentMonthDays.add(new DailyData(day, dayCount));
             currentMonthTotal += dayCount;
@@ -93,16 +93,18 @@ public class AdminDashboardService {
 
         // Previous month
         LocalDateTime previousMonthStart = currentMonthStart.minusMonths(1);
-        
+
         // Get daily breakdown for previous month
         List<DailyData> previousMonthDays = new ArrayList<>();
         long previousMonthTotal = 0;
         int daysInPreviousMonth = previousMonthStart.toLocalDate().lengthOfMonth();
-        
+
         for (int day = 1; day <= daysInPreviousMonth; day++) {
-            LocalDateTime dayStart = LocalDateTime.of(previousMonthStart.getYear(), previousMonthStart.getMonthValue(), day, 0, 0, 0);
-            LocalDateTime dayEnd = LocalDateTime.of(previousMonthStart.getYear(), previousMonthStart.getMonthValue(), day, 23, 59, 59);
-            
+            LocalDateTime dayStart = LocalDateTime.of(previousMonthStart.getYear(), previousMonthStart.getMonthValue(),
+                    day, 0, 0, 0);
+            LocalDateTime dayEnd = LocalDateTime.of(previousMonthStart.getYear(), previousMonthStart.getMonthValue(),
+                    day, 23, 59, 59);
+
             long dayCount = motherRepository.countByAcceptedStatusesAndCreatedAtBetween(dayStart, dayEnd);
             previousMonthDays.add(new DailyData(day, dayCount));
             previousMonthTotal += dayCount;
@@ -115,7 +117,7 @@ public class AdminDashboardService {
                 currentMonthName, currentMonthTotal, previousMonthName, previousMonthTotal);
 
         return new MonthlyComparisonStats(currentMonthName, currentMonthDays, currentMonthTotal,
-                                        previousMonthName, previousMonthDays, previousMonthTotal);
+                previousMonthName, previousMonthDays, previousMonthTotal);
     }
 
     /**
@@ -141,7 +143,7 @@ public class AdminDashboardService {
         private double percentageChange;
 
         public YearlyComparisonStats(int currentYear, List<MonthlyData> currentYearMonths, long currentYearTotal,
-                                   int previousYear, List<MonthlyData> previousYearMonths, long previousYearTotal) {
+                int previousYear, List<MonthlyData> previousYearMonths, long previousYearTotal) {
             this.currentYear = currentYear;
             this.currentYearMonths = currentYearMonths;
             this.currentYearTotal = currentYearTotal;
@@ -153,14 +155,37 @@ public class AdminDashboardService {
         }
 
         // Getters
-        public int getCurrentYear() { return currentYear; }
-        public List<MonthlyData> getCurrentYearMonths() { return currentYearMonths; }
-        public long getCurrentYearTotal() { return currentYearTotal; }
-        public int getPreviousYear() { return previousYear; }
-        public List<MonthlyData> getPreviousYearMonths() { return previousYearMonths; }
-        public long getPreviousYearTotal() { return previousYearTotal; }
-        public long getDifference() { return difference; }
-        public double getPercentageChange() { return percentageChange; }
+        public int getCurrentYear() {
+            return currentYear;
+        }
+
+        public List<MonthlyData> getCurrentYearMonths() {
+            return currentYearMonths;
+        }
+
+        public long getCurrentYearTotal() {
+            return currentYearTotal;
+        }
+
+        public int getPreviousYear() {
+            return previousYear;
+        }
+
+        public List<MonthlyData> getPreviousYearMonths() {
+            return previousYearMonths;
+        }
+
+        public long getPreviousYearTotal() {
+            return previousYearTotal;
+        }
+
+        public long getDifference() {
+            return difference;
+        }
+
+        public double getPercentageChange() {
+            return percentageChange;
+        }
     }
 
     public static class MonthlyComparisonStats {
@@ -174,7 +199,7 @@ public class AdminDashboardService {
         private double percentageChange;
 
         public MonthlyComparisonStats(String currentMonth, List<DailyData> currentMonthDays, long currentMonthTotal,
-                                    String previousMonth, List<DailyData> previousMonthDays, long previousMonthTotal) {
+                String previousMonth, List<DailyData> previousMonthDays, long previousMonthTotal) {
             this.currentMonth = currentMonth;
             this.currentMonthDays = currentMonthDays;
             this.currentMonthTotal = currentMonthTotal;
@@ -186,14 +211,37 @@ public class AdminDashboardService {
         }
 
         // Getters
-        public String getCurrentMonth() { return currentMonth; }
-        public List<DailyData> getCurrentMonthDays() { return currentMonthDays; }
-        public long getCurrentMonthTotal() { return currentMonthTotal; }
-        public String getPreviousMonth() { return previousMonth; }
-        public List<DailyData> getPreviousMonthDays() { return previousMonthDays; }
-        public long getPreviousMonthTotal() { return previousMonthTotal; }
-        public long getDifference() { return difference; }
-        public double getPercentageChange() { return percentageChange; }
+        public String getCurrentMonth() {
+            return currentMonth;
+        }
+
+        public List<DailyData> getCurrentMonthDays() {
+            return currentMonthDays;
+        }
+
+        public long getCurrentMonthTotal() {
+            return currentMonthTotal;
+        }
+
+        public String getPreviousMonth() {
+            return previousMonth;
+        }
+
+        public List<DailyData> getPreviousMonthDays() {
+            return previousMonthDays;
+        }
+
+        public long getPreviousMonthTotal() {
+            return previousMonthTotal;
+        }
+
+        public long getDifference() {
+            return difference;
+        }
+
+        public double getPercentageChange() {
+            return percentageChange;
+        }
     }
 
     public static class DashboardStats {
@@ -233,8 +281,13 @@ public class AdminDashboardService {
         }
 
         // Getters
-        public String getMonth() { return month; }
-        public long getCount() { return count; }
+        public String getMonth() {
+            return month;
+        }
+
+        public long getCount() {
+            return count;
+        }
     }
 
     public static class DailyData {
@@ -247,7 +300,12 @@ public class AdminDashboardService {
         }
 
         // Getters
-        public int getDay() { return day; }
-        public long getCount() { return count; }
+        public int getDay() {
+            return day;
+        }
+
+        public long getCount() {
+            return count;
+        }
     }
 }
