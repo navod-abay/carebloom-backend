@@ -125,4 +125,59 @@ public class AdminDashboardController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    /**
+     * Get monthly MOH office registrations with daily breakdown (current month vs
+     * previous month)
+     */
+    @GetMapping("/month-admin-mohoffices-registrations")
+    public ResponseEntity<AdminDashboardService.MOHOfficeRegistrationStats> getMonthlyMOHOfficeRegistrations() {
+        try {
+            AdminDashboardService.MOHOfficeRegistrationStats stats = dashboardService
+                    .getMonthlyMOHOfficeRegistrations();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get yearly MOH office registrations with monthly breakdown (current year vs
+     * previous year)
+     */
+    @GetMapping("/year-admin-mohoffices-registrations")
+    public ResponseEntity<AdminDashboardService.MOHOfficeYearlyStats> getYearlyMOHOfficeRegistrations() {
+        try {
+            AdminDashboardService.MOHOfficeYearlyStats stats = dashboardService.getYearlyMOHOfficeRegistrations();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get monthly MOH office district-wise registrations (count of MOH offices by district for current month)
+     */
+    @GetMapping("/month-admin-mohoffices-districtwise-registrations")
+    public ResponseEntity<AdminDashboardService.DistrictWiseTotals> getMonthlyMOHOfficeDistrictWiseRegistrations() {
+        try {
+            AdminDashboardService.DistrictWiseTotals stats = dashboardService.getMonthlyMOHOfficeDistrictWiseRegistrations();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get yearly MOH office district-wise registrations (count of MOH offices by district for current year)
+     */
+    @GetMapping("/year-admin-mohoffices-districtwise-registrations")
+    public ResponseEntity<AdminDashboardService.DistrictWiseTotals> getYearlyMOHOfficeDistrictWiseRegistrations() {
+        try {
+            AdminDashboardService.DistrictWiseTotals stats = dashboardService.getYearlyMOHOfficeDistrictWiseRegistrations();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }
