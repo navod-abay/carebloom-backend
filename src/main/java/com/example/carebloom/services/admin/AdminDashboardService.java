@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.example.carebloom.models.Mother;
 import com.example.carebloom.repositories.MotherRepository;
 
 import java.time.LocalDateTime;
@@ -176,6 +177,82 @@ public class AdminDashboardService {
                 currentYear, completeCount, normalCount, acceptedCount);
 
         return new RegistrationStatusTotals(String.valueOf(currentYear), completeCount, normalCount, acceptedCount);
+    }
+
+    /**
+     * Get monthly district-wise totals for current month
+     */
+    public DistrictWiseTotals getMonthlyDistrictWiseTotals() {
+        LocalDateTime now = LocalDateTime.now();
+        int currentYear = now.getYear();
+        int currentMonth = now.getMonthValue();
+
+        LocalDateTime monthStart = LocalDateTime.of(currentYear, currentMonth, 1, 0, 0, 0);
+        LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
+
+        // Get all mothers within the date range to extract distinct districts
+        List<Mother> mothers = motherRepository.findDistinctDistrictsByAcceptedStatusesAndCreatedAtBetween(monthStart,
+                monthEnd);
+
+        // Extract unique districts
+        List<String> distinctDistricts = mothers.stream()
+                .map(Mother::getDistrict)
+                .filter(district -> district != null && !district.trim().isEmpty())
+                .distinct()
+                .sorted()
+                .toList();
+
+        // Get count for each district
+        List<DistrictData> districtCounts = new ArrayList<>();
+        for (String district : distinctDistricts) {
+            long count = motherRepository.countByDistrictAndAcceptedStatusesAndCreatedAtBetween(district, monthStart,
+                    monthEnd);
+            if (count > 0) {
+                districtCounts.add(new DistrictData(district, count));
+            }
+        }
+
+        String monthName = now.getMonth().name();
+
+        logger.info("Monthly district-wise totals for {} - {} districts found", monthName, districtCounts.size());
+
+        return new DistrictWiseTotals(monthName + " " + currentYear, districtCounts);
+    }
+
+    /**
+     * Get yearly district-wise totals for current year
+     */
+    public DistrictWiseTotals getYearlyDistrictWiseTotals() {
+        int currentYear = LocalDateTime.now().getYear();
+
+        LocalDateTime yearStart = LocalDateTime.of(currentYear, 1, 1, 0, 0, 0);
+        LocalDateTime yearEnd = LocalDateTime.of(currentYear, 12, 31, 23, 59, 59);
+
+        // Get all mothers within the date range to extract distinct districts
+        List<Mother> mothers = motherRepository.findDistinctDistrictsByAcceptedStatusesAndCreatedAtBetween(yearStart,
+                yearEnd);
+
+        // Extract unique districts
+        List<String> distinctDistricts = mothers.stream()
+                .map(Mother::getDistrict)
+                .filter(district -> district != null && !district.trim().isEmpty())
+                .distinct()
+                .sorted()
+                .toList();
+
+        // Get count for each district
+        List<DistrictData> districtCounts = new ArrayList<>();
+        for (String district : distinctDistricts) {
+            long count = motherRepository.countByDistrictAndAcceptedStatusesAndCreatedAtBetween(district, yearStart,
+                    yearEnd);
+            if (count > 0) {
+                districtCounts.add(new DistrictData(district, count));
+            }
+        }
+
+        logger.info("Yearly district-wise totals for {} - {} districts found", currentYear, districtCounts.size());
+
+        return new DistrictWiseTotals(String.valueOf(currentYear), districtCounts);
     }
 
     // Inner classes for response DTOs
@@ -391,6 +468,52 @@ public class AdminDashboardService {
 
         public long getTotalCount() {
             return totalCount;
+        }
+    }
+
+    // Class for district-wise totals
+    public static class DistrictWiseTotals {
+        private String period;
+        private List<DistrictData> districts;
+        private long totalCount;
+
+        public DistrictWiseTotals(String period, List<DistrictData> districts) {
+            this.period = period;
+            this.districts = districts;
+            this.totalCount = districts.stream().mapToLong(DistrictData::getCount).sum();
+        }
+
+        // Getters
+        public String getPeriod() {
+            return period;
+        }
+
+        public List<DistrictData> getDistricts() {
+            return districts;
+        }
+
+        public long getTotalCount() {
+            return totalCount;
+        }
+    }
+
+    // Class for individual district data
+    public static class DistrictData {
+        private String district;
+        private long count;
+
+        public DistrictData(String district, long count) {
+            this.district = district;
+            this.count = count;
+        }
+
+        // Getters
+        public String getDistrict() {
+            return district;
+        }
+
+        public long getCount() {
+            return count;
         }
     }
 }

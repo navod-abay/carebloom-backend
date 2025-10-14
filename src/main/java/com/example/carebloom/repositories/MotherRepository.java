@@ -34,4 +34,14 @@ public interface MotherRepository extends MongoRepository<Mother, String> {
     // Get count by specific registration status (all time)
     @Query(value = "{ 'registrationStatus': ?0 }", count = true)
     long countByRegistrationStatus(String registrationStatus);
+
+    // Get count by district with accepted statuses within date range
+    @Query(value = "{ 'registrationStatus': { $in: ['complete', 'normal', 'accepted'] }, 'district': ?0, 'createdAt': { $gte: ?1, $lt: ?2 } }", count = true)
+    long countByDistrictAndAcceptedStatusesAndCreatedAtBetween(String district, LocalDateTime startDate,
+            LocalDateTime endDate);
+
+    // Get all distinct districts with accepted statuses within date range
+    @Query(value = "{ 'registrationStatus': { $in: ['complete', 'normal', 'accepted'] }, 'createdAt': { $gte: ?0, $lt: ?1 } }", fields = "{ 'district': 1 }")
+    List<Mother> findDistinctDistrictsByAcceptedStatusesAndCreatedAtBetween(LocalDateTime startDate,
+            LocalDateTime endDate);
 }

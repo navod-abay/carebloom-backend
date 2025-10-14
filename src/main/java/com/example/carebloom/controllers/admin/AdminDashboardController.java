@@ -97,4 +97,32 @@ public class AdminDashboardController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    /**
+     * Get monthly district-wise totals (count of mothers by district for current
+     * month)
+     */
+    @GetMapping("/month-districtwise-total-mothers")
+    public ResponseEntity<AdminDashboardService.DistrictWiseTotals> getMonthlyDistrictWiseTotals() {
+        try {
+            AdminDashboardService.DistrictWiseTotals stats = dashboardService.getMonthlyDistrictWiseTotals();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get yearly district-wise totals (count of mothers by district for current
+     * year)
+     */
+    @GetMapping("/year-districtwise-total-mothers")
+    public ResponseEntity<AdminDashboardService.DistrictWiseTotals> getYearlyDistrictWiseTotals() {
+        try {
+            AdminDashboardService.DistrictWiseTotals stats = dashboardService.getYearlyDistrictWiseTotals();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }
