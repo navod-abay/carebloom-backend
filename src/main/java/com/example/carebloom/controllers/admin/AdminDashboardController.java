@@ -68,4 +68,33 @@ public class AdminDashboardController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    /**
+     * Get monthly registration status totals (complete, normal, accepted counts for
+     * current month)
+     */
+    @GetMapping("/month-total-registrationstatuses")
+    public ResponseEntity<AdminDashboardService.RegistrationStatusTotals> getMonthlyRegistrationStatusTotals() {
+        try {
+            AdminDashboardService.RegistrationStatusTotals stats = dashboardService
+                    .getMonthlyRegistrationStatusTotals();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get yearly registration status totals (complete, normal, accepted counts for
+     * current year)
+     */
+    @GetMapping("/year-total-registrationstatuses")
+    public ResponseEntity<AdminDashboardService.RegistrationStatusTotals> getYearlyRegistrationStatusTotals() {
+        try {
+            AdminDashboardService.RegistrationStatusTotals stats = dashboardService.getYearlyRegistrationStatusTotals();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

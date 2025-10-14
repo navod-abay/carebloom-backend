@@ -131,6 +131,53 @@ public class AdminDashboardService {
         return new DashboardStats(totalCount, yearlyStats, monthlyStats);
     }
 
+    /**
+     * Get monthly registration status totals for current month
+     */
+    public RegistrationStatusTotals getMonthlyRegistrationStatusTotals() {
+        LocalDateTime now = LocalDateTime.now();
+        int currentYear = now.getYear();
+        int currentMonth = now.getMonthValue();
+
+        LocalDateTime monthStart = LocalDateTime.of(currentYear, currentMonth, 1, 0, 0, 0);
+        LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
+
+        long completeCount = motherRepository.countByRegistrationStatusAndCreatedAtBetween("complete", monthStart,
+                monthEnd);
+        long normalCount = motherRepository.countByRegistrationStatusAndCreatedAtBetween("normal", monthStart,
+                monthEnd);
+        long acceptedCount = motherRepository.countByRegistrationStatusAndCreatedAtBetween("accepted", monthStart,
+                monthEnd);
+
+        String monthName = now.getMonth().name();
+
+        logger.info("Monthly status totals for {} - Complete: {}, Normal: {}, Accepted: {}",
+                monthName, completeCount, normalCount, acceptedCount);
+
+        return new RegistrationStatusTotals(monthName + " " + currentYear, completeCount, normalCount, acceptedCount);
+    }
+
+    /**
+     * Get yearly registration status totals for current year
+     */
+    public RegistrationStatusTotals getYearlyRegistrationStatusTotals() {
+        int currentYear = LocalDateTime.now().getYear();
+
+        LocalDateTime yearStart = LocalDateTime.of(currentYear, 1, 1, 0, 0, 0);
+        LocalDateTime yearEnd = LocalDateTime.of(currentYear, 12, 31, 23, 59, 59);
+
+        long completeCount = motherRepository.countByRegistrationStatusAndCreatedAtBetween("complete", yearStart,
+                yearEnd);
+        long normalCount = motherRepository.countByRegistrationStatusAndCreatedAtBetween("normal", yearStart, yearEnd);
+        long acceptedCount = motherRepository.countByRegistrationStatusAndCreatedAtBetween("accepted", yearStart,
+                yearEnd);
+
+        logger.info("Yearly status totals for {} - Complete: {}, Normal: {}, Accepted: {}",
+                currentYear, completeCount, normalCount, acceptedCount);
+
+        return new RegistrationStatusTotals(String.valueOf(currentYear), completeCount, normalCount, acceptedCount);
+    }
+
     // Inner classes for response DTOs
     public static class YearlyComparisonStats {
         private int currentYear;
@@ -306,6 +353,44 @@ public class AdminDashboardService {
 
         public long getCount() {
             return count;
+        }
+    }
+
+    // Class for registration status totals
+    public static class RegistrationStatusTotals {
+        private String period;
+        private long completeCount;
+        private long normalCount;
+        private long acceptedCount;
+        private long totalCount;
+
+        public RegistrationStatusTotals(String period, long completeCount, long normalCount, long acceptedCount) {
+            this.period = period;
+            this.completeCount = completeCount;
+            this.normalCount = normalCount;
+            this.acceptedCount = acceptedCount;
+            this.totalCount = completeCount + normalCount + acceptedCount;
+        }
+
+        // Getters
+        public String getPeriod() {
+            return period;
+        }
+
+        public long getCompleteCount() {
+            return completeCount;
+        }
+
+        public long getNormalCount() {
+            return normalCount;
+        }
+
+        public long getAcceptedCount() {
+            return acceptedCount;
+        }
+
+        public long getTotalCount() {
+            return totalCount;
         }
     }
 }

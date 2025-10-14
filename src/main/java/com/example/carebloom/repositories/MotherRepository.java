@@ -25,4 +25,13 @@ public interface MotherRepository extends MongoRepository<Mother, String> {
     // Get count of mothers with accepted statuses within a date range
     @Query(value = "{ 'registrationStatus': { $in: ['complete', 'normal', 'accepted'] }, 'createdAt': { $gte: ?0, $lt: ?1 } }", count = true)
     long countByAcceptedStatusesAndCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    // Get count by specific registration status within date range
+    @Query(value = "{ 'registrationStatus': ?0, 'createdAt': { $gte: ?1, $lt: ?2 } }", count = true)
+    long countByRegistrationStatusAndCreatedAtBetween(String registrationStatus, LocalDateTime startDate,
+            LocalDateTime endDate);
+
+    // Get count by specific registration status (all time)
+    @Query(value = "{ 'registrationStatus': ?0 }", count = true)
+    long countByRegistrationStatus(String registrationStatus);
 }
