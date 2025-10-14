@@ -212,4 +212,32 @@ public class AdminDashboardController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    /**
+     * Get monthly vendor registrations with daily breakdown (current month vs
+     * previous month)
+     */
+    @GetMapping("/month-admin-vendors-registrations")
+    public ResponseEntity<AdminDashboardService.VendorRegistrationStats> getMonthlyVendorRegistrations() {
+        try {
+            AdminDashboardService.VendorRegistrationStats stats = dashboardService.getMonthlyVendorRegistrations();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get yearly vendor registrations with monthly breakdown (current year vs
+     * previous year)
+     */
+    @GetMapping("/year-admin-vendors-registrations")
+    public ResponseEntity<AdminDashboardService.VendorYearlyStats> getYearlyVendorRegistrations() {
+        try {
+            AdminDashboardService.VendorYearlyStats stats = dashboardService.getYearlyVendorRegistrations();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }
