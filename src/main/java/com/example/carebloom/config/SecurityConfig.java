@@ -49,8 +49,9 @@ public class SecurityConfig {
                         
                         // Queue management endpoints (public for testing/SSE)
                         .requestMatchers("/api/clinics/*/queue/events").permitAll() // SSE endpoint
-                        .requestMatchers("/api/v1/moh/clinics/*/queue/stream").permitAll() // MoH SSE endpoint
-                        .requestMatchers("/api/v1/clinics/*/queue/**").permitAll() // Direct clinic queue endpoints
+                        .requestMatchers("/api/v1/moh/clinics/*/queue/stream").permitAll() // MoH SSE endpoint  
+                        .requestMatchers("/api/clinics/*/queue/**").permitAll() // Direct clinic queue endpoints
+                        .requestMatchers("/api/v1/clinics/*/queue/**").permitAll() // V1 clinic queue endpoints
                         .requestMatchers("/api/v1/moh/clinics/*/queue/**").permitAll() // MOH queue endpoints
                         
                         // Content endpoints
@@ -70,8 +71,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/vendor/**").hasRole("VENDOR")
                         .requestMatchers("/api/v1/moh/**").hasAnyRole("MOH_OFFICE_USER", "MOH_OFFICE_ADMIN")
                         
-                        .anyRequest().authenticated());
-
+                        .anyRequest().authenticated()
+                );
+    
         return http.build();
     }
 }

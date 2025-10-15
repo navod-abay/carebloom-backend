@@ -1,7 +1,8 @@
 package com.example.carebloom.controllers.moh;
 
-import com.example.carebloom.services.QueueService;
+import com.example.carebloom.services.NewQueueService;
 import com.example.carebloom.repositories.QueueUserRepository;
+import com.example.carebloom.models.QueueUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/debug/queue")
@@ -21,7 +23,7 @@ public class QueueCleanupController {
     private QueueUserRepository queueUserRepository;
     
     @Autowired
-    private QueueService queueService;
+    private NewQueueService newQueueService;
     
     /**
      * Get all queue users in database for debugging
@@ -29,7 +31,7 @@ public class QueueCleanupController {
     @GetMapping("/all")
     public ResponseEntity<Map<String, Object>> getAllQueueUsers() {
         try {
-            var allQueueUsers = queueUserRepository.findAll();
+            List<QueueUser> allQueueUsers = queueUserRepository.findAll();
             
             Map<String, Object> response = new HashMap<>();
             response.put("total", allQueueUsers.size());
@@ -102,8 +104,8 @@ public class QueueCleanupController {
     @GetMapping("/status/{clinicId}")
     public ResponseEntity<Map<String, Object>> getQueueStatusDebug(@PathVariable String clinicId) {
         try {
-            var queueStatus = queueService.getQueueStatus(clinicId);
-            var queueUsers = queueUserRepository.findByClinicIdOrderByPosition(clinicId);
+            Map<String, Object> queueStatus = newQueueService.getQueueStatus(clinicId);
+            List<QueueUser> queueUsers = queueUserRepository.findByClinicIdOrderByPosition(clinicId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("queueStatus", queueStatus);
@@ -115,6 +117,24 @@ public class QueueCleanupController {
         } catch (Exception e) {
             logger.error("Error getting queue status for clinic {}: {}", clinicId, e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
+     * Clean up completed and no-show patients for a specific clinic
+     */
+    @DeleteMapping("/completed/{clinicId}")
+    public ResponseEntity<Map<String, Object>> cleanupCompletedPatients(@PathVariable String clinicId) {
+        try {
+            logger.info("Manual cleanup of completed patients for clinic: {}", clinicId);
+            Map<String, Object> result = newQueueService.cleanupCompletedPatients(clinicId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Error cleaning up completed patients for clinic: {}", clinicId, e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.internalServerError().body(errorResponse);
         }
