@@ -60,13 +60,8 @@ public class QueueService {
             throw new IllegalStateException("Queue can only be started on the clinic date");
         }
         
-        // Validate mothers are added to clinic (check both addedMothers and registeredMotherIds)
-        boolean hasAddedMothers = clinic.getAddedMothers() != null && !clinic.getAddedMothers().isEmpty();
-        boolean hasRegisteredMothers = clinic.getRegisteredMotherIds() != null && !clinic.getRegisteredMotherIds().isEmpty();
-        
-        if (!hasAddedMothers && !hasRegisteredMothers) {
-            throw new IllegalStateException("No mothers added to clinic. Cannot start queue.");
-        }
+        // No need to validate mothers - queue can start empty and mothers can be added manually
+        logger.info("Starting empty queue for clinic {}. Mothers can be added manually through the queue interface.", clinicId);
         
         // Clear any existing queue data for this clinic
         queueUserRepository.deleteByClinicId(clinicId);
@@ -84,56 +79,12 @@ public class QueueService {
             clinic.getQueueSettings().setOpen(true);
         }
         
-        // Create queue users from added mothers or registered mothers
+        // Start with empty queue - mothers will be added manually through the queue interface
+        // This allows for more controlled queue management
         List<QueueUser> queueUsers = new ArrayList<>();
-        int position = 1;
         
-        // Try to use addedMothers first, fallback to registeredMotherIds
-        if (hasAddedMothers) {
-            // Use existing addedMothers logic
-            for (AddedMother addedMother : clinic.getAddedMothers()) {
-                QueueUser queueUser = new QueueUser();
-                queueUser.setName(addedMother.getName());
-                queueUser.setEmail(addedMother.getEmail());
-                queueUser.setMotherId(addedMother.getId());
-                queueUser.setClinicId(clinicId);
-                queueUser.setPosition(position++);
-                queueUser.setStatus("waiting");
-                queueUser.setJoinedTime(LocalDateTime.now().toString());
-                queueUser.setWaitTime(calculateWaitTime(position - 1, clinic.getQueueSettings().getAvgAppointmentTime()));
-                queueUser.setEstimatedTime(calculateEstimatedTime(clinic.getStartTime(), queueUser.getWaitTime()));
-                
-                queueUsers.add(queueUser);
-            }
-        } else if (hasRegisteredMothers) {
-            // Use registeredMotherIds by fetching mother details
-            List<Mother> registeredMothers = motherRepository.findAllById(clinic.getRegisteredMotherIds());
-            logger.info("Creating queue from {} registered mothers for clinic {}", registeredMothers.size(), clinicId);
-            
-            for (Mother mother : registeredMothers) {
-                QueueUser queueUser = new QueueUser();
-                queueUser.setName(mother.getName());
-                queueUser.setEmail(mother.getEmail());
-                queueUser.setMotherId(mother.getId());
-                queueUser.setClinicId(clinicId);
-                queueUser.setPosition(position++);
-                queueUser.setStatus("waiting");
-                queueUser.setJoinedTime(LocalDateTime.now().toString());
-                queueUser.setWaitTime(calculateWaitTime(position - 1, clinic.getQueueSettings().getAvgAppointmentTime()));
-                queueUser.setEstimatedTime(calculateEstimatedTime(clinic.getStartTime(), queueUser.getWaitTime()));
-                
-                queueUsers.add(queueUser);
-            }
-        }
-        
-        // Set first patient as in-progress
-        if (!queueUsers.isEmpty()) {
-            queueUsers.get(0).setStatus("in-progress");
-            queueUsers.get(0).setWaitTime(0);
-        }
-        
-        // Save queue users
-        queueUserRepository.saveAll(queueUsers);
+        // Don't automatically add mothers - they should be added manually through the queue modal
+        logger.info("Queue started for clinic {} - ready to accept patients", clinicId);
         
         // Update clinic status
         clinic.setQueueStatus("open");
@@ -445,143 +396,6 @@ public class QueueService {
         queueSSEService.broadcastQueueUpdate(clinicId, response);
         
         return settings;
-    }
-
-    /**
-     * Get all patients in queue (for monitoring purposes)
-     */
-    public List<QueueUser> getAllPatientsInQueue(String clinicId) {
-        logger.info("Getting all patients for clinic: {}", clinicId);
-        
-        clinicRepository.findById(clinicId)
-            .orElseThrow(() -> new IllegalArgumentException("Clinic not found"));
-        
-        return queueUserRepository.findByClinicIdOrderByPosition(clinicId);
-    }
-
-    /**
-     * Get current patient who is being served
-     */
-    public QueueUser getCurrentPatient(String clinicId) {
-        logger.info("Getting current patient for clinic: {}", clinicId);
-        
-        clinicRepository.findById(clinicId)
-            .orElseThrow(() -> new IllegalArgumentException("Clinic not found"));
-        
-        Optional<QueueUser> currentPatient = queueUserRepository.findFirstByClinicIdAndStatus(clinicId, "in-progress");
-        return currentPatient.orElse(null);
-    }
-
-    /**
-     * Complete current patient and move to next
-     */
-    public QueueStatusResponse completeCurrentPatient(String clinicId) {
-        logger.info("Completing current patient for clinic: {}", clinicId);
-        
-        Clinic clinic = clinicRepository.findById(clinicId)
-            .orElseThrow(() -> new IllegalArgumentException("Clinic not found"));
-        
-        if (!"open".equals(clinic.getQueueStatus())) {
-            throw new IllegalStateException("Queue is not currently open");
-        }
-        
-        // Find current patient and mark as completed
-        Optional<QueueUser> currentPatient = queueUserRepository.findFirstByClinicIdAndStatus(clinicId, "in-progress");
-        if (currentPatient.isEmpty()) {
-            throw new IllegalStateException("No patient is currently being served");
-        }
-        
-        currentPatient.get().setStatus("completed");
-        queueUserRepository.save(currentPatient.get());
-        
-        // Move next patient to in-progress
-        List<QueueUser> waitingPatients = queueUserRepository.findByClinicIdAndStatusOrderByPosition(clinicId, "waiting");
-        if (!waitingPatients.isEmpty()) {
-            QueueUser nextPatient = waitingPatients.get(0);
-            nextPatient.setStatus("in-progress");
-            nextPatient.setWaitTime(0);
-            queueUserRepository.save(nextPatient);
-            
-            updateWaitTimes(clinicId);
-        } else {
-            // No more patients - consider auto-closing
-            if (clinic.getQueueSettings() != null && clinic.getQueueSettings().isAutoClose()) {
-                closeQueue(clinicId, false);
-            }
-        }
-        
-        QueueStatusResponse response = getQueueStatus(clinicId);
-        queueSSEService.broadcastQueueUpdate(clinicId, response);
-        
-        return response;
-    }
-
-    /**
-     * Get queue history (completed and no-show patients)
-     */
-    public List<QueueUser> getQueueHistory(String clinicId) {
-        logger.info("Getting queue history for clinic: {}", clinicId);
-        
-        clinicRepository.findById(clinicId)
-            .orElseThrow(() -> new IllegalArgumentException("Clinic not found"));
-        
-        List<QueueUser> completed = queueUserRepository.findByClinicIdAndStatusOrderByPosition(clinicId, "completed");
-        List<QueueUser> noShow = queueUserRepository.findByClinicIdAndStatusOrderByPosition(clinicId, "no-show");
-        
-        List<QueueUser> history = new ArrayList<>(completed);
-        history.addAll(noShow);
-        
-        // Sort by position
-        history.sort(Comparator.comparing(QueueUser::getPosition));
-        
-        return history;
-    }
-
-    /**
-     * Update patient status (overloaded method to handle Map input from controller)
-     */
-    public QueueStatusResponse updatePatientStatus(String clinicId, String patientId, Map<String, Object> statusData) {
-        String status = (String) statusData.get("status");
-        String notes = (String) statusData.get("notes");
-        
-        logger.info("Updating patient status for clinic: {}, patient: {}, status: {}", clinicId, patientId, status);
-        
-        QueueUser patient = queueUserRepository.findById(patientId)
-            .orElseThrow(() -> new IllegalArgumentException("Patient not found in queue"));
-        
-        if (!patient.getClinicId().equals(clinicId)) {
-            throw new IllegalArgumentException("Patient does not belong to this clinic");
-        }
-        
-        String oldStatus = patient.getStatus();
-        patient.setStatus(status);
-        if (notes != null) {
-            patient.setNotes(notes);
-        }
-        queueUserRepository.save(patient);
-        
-        // If moving from in-progress to completed, process next patient
-        if ("in-progress".equals(oldStatus) && "completed".equals(status)) {
-            return processNextPatient(clinicId);
-        }
-        
-        QueueStatusResponse response = getQueueStatus(clinicId);
-        queueSSEService.broadcastQueueUpdate(clinicId, response);
-        
-        return response;
-    }
-
-    /**
-     * Add patient to queue (overloaded method to handle Map input from controller)
-     */
-    public QueueStatusResponse addPatientToQueue(String clinicId, Map<String, Object> patientData) {
-        QueueUserDto dto = new QueueUserDto();
-        dto.setName((String) patientData.get("name"));
-        dto.setEmail((String) patientData.get("email"));
-        dto.setMotherId((String) patientData.get("motherId"));
-        dto.setNotes((String) patientData.get("notes"));
-        
-        return addPatientToQueue(clinicId, dto);
     }
 
     /**
