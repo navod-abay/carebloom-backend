@@ -10,7 +10,6 @@ import com.example.carebloom.dto.CreateClinicRequest;
 import com.example.carebloom.dto.CreateClinicResponse;
 import com.example.carebloom.dto.UpdateClinicRequest;
 import com.example.carebloom.dto.moh.ClinicWithMothersDto;
-import com.example.carebloom.services.QueueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,16 +31,8 @@ public class MoHClinicService {
     @Autowired private ClinicRepository clinicRepository;
     @Autowired private MoHOfficeUserRepository mohOfficeUserRepository;
     @Autowired private MotherRepository motherRepository;
-    @Autowired private QueueService queueService;
 
-    public Object getQueueStatus(String clinicId) {
-        try {
-            return queueService.getQueueStatus(clinicId);
-        } catch (Exception e) {
-            logger.error("Error getting queue status for clinic {}: {}", clinicId, e.getMessage());
-            return java.util.Map.of("success", false, "error", "Failed to get queue status: " + e.getMessage());
-        }
-    }
+    // Queue methods moved to NewQueueService
 
     public List<Clinic> getAllClinicsByMohOffice() {
         String mohOfficeId = getCurrentUserMohOfficeId();
@@ -195,17 +186,13 @@ public class MoHClinicService {
     private String getCurrentUserMohOfficeId() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
-                // For testing purposes, return a default MoH office ID
-                logger.warn("No authenticated user found, using default MoH office ID for testing");
-                return "688072f834faf68abe8c8467"; // Default MoH office ID for testing
-            }
+            if (authentication == null || !authentication.isAuthenticated()) return null;
             String firebaseUid = authentication.getName();
             MoHOfficeUser mohUser = mohOfficeUserRepository.findByFirebaseUid(firebaseUid);
-            return mohUser != null ? mohUser.getOfficeId() : "688072f834faf68abe8c8467"; // Fallback to default
+            return mohUser != null ? mohUser.getOfficeId() : null;
         } catch (Exception e) {
-            logger.error("Error getting current user's MoH office ID, using fallback", e);
-            return "688072f834faf68abe8c8467"; // Fallback MoH office ID for testing
+            logger.error("Error getting current user's MoH office ID", e);
+            return null;
         }
     }
 
@@ -256,133 +243,5 @@ public class MoHClinicService {
         }
     }
 
-    // ===== Queue Management Methods =====
-
-    public Object startQueue(String clinicId) {
-        try {
-            // Ensure the clinic belongs to current user's MoH office
-            String currentMohOfficeId = getCurrentUserMohOfficeId();
-            if (currentMohOfficeId == null) {
-                throw new IllegalArgumentException("Unable to determine MoH office");
-            }
-            
-            Optional<Clinic> clinicOpt = clinicRepository.findById(clinicId);
-            if (clinicOpt.isEmpty()) {
-                throw new IllegalArgumentException("Clinic not found");
-            }
-            
-            if (!clinicOpt.get().getMohOfficeId().equals(currentMohOfficeId)) {
-                throw new IllegalArgumentException("Access denied to this clinic");
-            }
-            
-            return queueService.startQueue(clinicId);
-        } catch (Exception e) {
-            logger.error("Error starting queue for clinic {}: {}", clinicId, e.getMessage());
-            throw e;
-        }
-    }
-
-    public java.util.Map<String, Object> closeQueue(String clinicId, boolean force) {
-        try {
-            // Ensure the clinic belongs to current user's MoH office
-            String currentMohOfficeId = getCurrentUserMohOfficeId();
-            if (currentMohOfficeId == null) {
-                throw new IllegalArgumentException("Unable to determine MoH office");
-            }
-            
-            Optional<Clinic> clinicOpt = clinicRepository.findById(clinicId);
-            if (clinicOpt.isEmpty()) {
-                throw new IllegalArgumentException("Clinic not found");
-            }
-            
-            if (!clinicOpt.get().getMohOfficeId().equals(currentMohOfficeId)) {
-                throw new IllegalArgumentException("Access denied to this clinic");
-            }
-            
-            return queueService.closeQueue(clinicId, force);
-        } catch (Exception e) {
-            logger.error("Error closing queue for clinic {}: {}", clinicId, e.getMessage());
-            throw e;
-        }
-    }
-
-    public Object addPatientToQueue(String clinicId, Object patient) {
-        try {
-            // Ensure the clinic belongs to current user's MoH office
-            String currentMohOfficeId = getCurrentUserMohOfficeId();
-            if (currentMohOfficeId == null) {
-                throw new IllegalArgumentException("Unable to determine MoH office");
-            }
-            
-            Optional<Clinic> clinicOpt = clinicRepository.findById(clinicId);
-            if (clinicOpt.isEmpty()) {
-                throw new IllegalArgumentException("Clinic not found");
-            }
-            
-            if (!clinicOpt.get().getMohOfficeId().equals(currentMohOfficeId)) {
-                throw new IllegalArgumentException("Access denied to this clinic");
-            }
-            
-            // Convert the patient object to Map if needed
-            if (patient instanceof java.util.Map) {
-                @SuppressWarnings("unchecked")
-                java.util.Map<String, Object> patientMap = (java.util.Map<String, Object>) patient;
-                return queueService.addPatientToQueue(clinicId, patientMap);
-            } else {
-                throw new IllegalArgumentException("Invalid patient data format");
-            }
-        } catch (Exception e) {
-            logger.error("Error adding patient to queue for clinic {}: {}", clinicId, e.getMessage());
-            throw e;
-        }
-    }
-
-    public Object updateQueueSettings(String clinicId, Object settings) {
-        try {
-            // Ensure the clinic belongs to current user's MoH office
-            String currentMohOfficeId = getCurrentUserMohOfficeId();
-            if (currentMohOfficeId == null) {
-                throw new IllegalArgumentException("Unable to determine MoH office");
-            }
-            
-            Optional<Clinic> clinicOpt = clinicRepository.findById(clinicId);
-            if (clinicOpt.isEmpty()) {
-                throw new IllegalArgumentException("Clinic not found");
-            }
-            
-            if (!clinicOpt.get().getMohOfficeId().equals(currentMohOfficeId)) {
-                throw new IllegalArgumentException("Access denied to this clinic");
-            }
-            
-            // Convert the settings object to proper DTO if needed
-            return queueService.updateQueueSettings(clinicId, (com.example.carebloom.dto.queue.QueueSettingsDto) settings);
-        } catch (Exception e) {
-            logger.error("Error updating queue settings for clinic {}: {}", clinicId, e.getMessage());
-            throw e;
-        }
-    }
-
-    public Object processNextPatient(String clinicId) {
-        try {
-            // Ensure the clinic belongs to current user's MoH office
-            String currentMohOfficeId = getCurrentUserMohOfficeId();
-            if (currentMohOfficeId == null) {
-                throw new IllegalArgumentException("Unable to determine MoH office");
-            }
-            
-            Optional<Clinic> clinicOpt = clinicRepository.findById(clinicId);
-            if (clinicOpt.isEmpty()) {
-                throw new IllegalArgumentException("Clinic not found");
-            }
-            
-            if (!clinicOpt.get().getMohOfficeId().equals(currentMohOfficeId)) {
-                throw new IllegalArgumentException("Access denied to this clinic");
-            }
-            
-            return queueService.processNextPatient(clinicId);
-        } catch (Exception e) {
-            logger.error("Error processing next patient for clinic {}: {}", clinicId, e.getMessage());
-            throw e;
-        }
-    }
+    // ===== Queue Management Methods moved to NewQueueService =====
 }
