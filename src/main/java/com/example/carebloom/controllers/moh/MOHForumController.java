@@ -1,30 +1,22 @@
-package com.example.carebloom.controllers.mother;
+package com.example.carebloom.controllers.moh;
 
-import com.example.carebloom.dto.forum.CreateForumThreadRequest;
-import com.example.carebloom.dto.forum.CreateReplyRequest;
 import com.example.carebloom.dto.forum.ForumThreadSummaryDTO;
+import com.example.carebloom.dto.forum.CreateReplyRequest;
 import com.example.carebloom.models.ForumThread;
 import com.example.carebloom.services.ForumService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/mothers/forum")
-@CrossOrigin(origins = "${app.cors.mother-origin}")
-public class ForumController {
+@RequestMapping("/api/v1/moh/forum")
+@CrossOrigin(origins = "${app.cors.moh-origin}")
+public class MOHForumController {
 
     @Autowired
     private ForumService forumService;
-
-    @PostMapping("/thread")
-    public ResponseEntity<ForumThread> createThread(@RequestBody CreateForumThreadRequest request) {
-        ForumThread createdThread = forumService.createThread(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdThread);
-    }
 
     @GetMapping("/threads")
     public ResponseEntity<Page<ForumThreadSummaryDTO>> getThreads(Pageable pageable) {
@@ -32,15 +24,15 @@ public class ForumController {
         return ResponseEntity.ok(threads);
     }
 
-    @PostMapping("/thread/{threadId}/reply")
-    public ResponseEntity<ForumThread> addReplyToThread(@PathVariable String threadId, @RequestBody CreateReplyRequest request) {
-        ForumThread updatedThread = forumService.addReply(threadId, request);
-        return ResponseEntity.ok(updatedThread);
-    }
-
     @GetMapping("/thread/{threadId}")
     public ResponseEntity<ForumThread> getThreadById(@PathVariable String threadId) {
         ForumThread thread = forumService.getThreadById(threadId);
         return ResponseEntity.ok(thread);
+    }
+
+    @PostMapping("/thread/{threadId}/reply")
+    public ResponseEntity<ForumThread> addReply(@PathVariable String threadId, @RequestBody CreateReplyRequest request) {
+        ForumThread updatedThread = forumService.addReplyAsMoh(threadId, request);
+        return ResponseEntity.ok(updatedThread);
     }
 }

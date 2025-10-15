@@ -34,8 +34,6 @@ public class MotherHospitalService {
     @Autowired
     private WorkshopRepository workshopRepository;
 
-    @Autowired
-    private UnitRepository unitRepository;
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     

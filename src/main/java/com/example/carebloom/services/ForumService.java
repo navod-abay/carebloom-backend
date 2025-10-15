@@ -5,6 +5,8 @@ import com.example.carebloom.dto.forum.CreateReplyRequest;
 import com.example.carebloom.dto.forum.ForumThreadSummaryDTO;
 import com.example.carebloom.models.ForumReply;
 import com.example.carebloom.models.ForumThread;
+import com.example.carebloom.models.Midwife;
+import com.example.carebloom.models.MoHOfficeUser;
 import com.example.carebloom.models.Mother;
 import com.example.carebloom.repositories.ForumThreadRepository;
 import com.example.carebloom.utils.SecurityUtils;
@@ -14,7 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
+import java.util.List;
 @Service
 public class ForumService {
 
@@ -43,7 +45,7 @@ public class ForumService {
         return forumThreadRepository.save(thread);
     }
 
-    public ForumThread addReplyToThread(String threadId, CreateReplyRequest request) {
+    public ForumThread addReply(String threadId, CreateReplyRequest request) {
         Mother mother = SecurityUtils.getCurrentMother();
         ForumThread thread = forumThreadRepository.findById(threadId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Forum thread not found"));
@@ -60,7 +62,105 @@ public class ForumService {
         reply.setAuthorProfileImage(mother.getProfilePhotoUrl());
         reply.setAuthorRole(ForumReply.AuthorRole.MOTHER);
 
-        thread.getReplies().add(reply);
+        if (request.getPath() == null || request.getPath().isEmpty()) {
+            // Replying to the main thread
+            thread.getReplies().add(reply);
+        } else {
+            // Replying to a nested reply
+            List<ForumReply> replies = thread.getReplies();
+            ForumReply parentReply = null;
+
+            for (String replyId : request.getPath()) {
+                parentReply = replies.stream()
+                        .filter(r -> r.getId().equals(replyId))
+                        .findFirst()
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent reply not found in path"));
+                replies = parentReply.getReplies();
+            }
+
+            if (parentReply != null) {
+                parentReply.getReplies().add(reply);
+            } else {
+                // This case should ideally not be reached if path is not empty
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reply path");
+            }
+        }
+
+        return forumThreadRepository.save(thread);
+    }
+
+    public ForumThread addReplyAsMoh(String threadId, CreateReplyRequest request) {
+        MoHOfficeUser mohUser = SecurityUtils.getCurrentMohUser();
+        ForumThread thread = forumThreadRepository.findById(threadId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Forum thread not found"));
+
+        ForumReply reply = new ForumReply();
+        reply.setContent(request.getContent());
+        reply.setAuthorId(mohUser.getId());
+        reply.setAuthorName(mohUser.getName());
+        reply.setAuthorProfileImage(null); // MoH users don't have profile images in this model
+        reply.setAuthorRole(ForumReply.AuthorRole.MOH_OFFICE);
+
+        if (request.getPath() == null || request.getPath().isEmpty()) {
+            // Replying to the main thread
+            thread.getReplies().add(reply);
+        } else {
+            // Replying to a nested reply
+            List<ForumReply> replies = thread.getReplies();
+            ForumReply parentReply = null;
+
+            for (String replyId : request.getPath()) {
+                parentReply = replies.stream()
+                        .filter(r -> r.getId().equals(replyId))
+                        .findFirst()
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent reply not found in path"));
+                replies = parentReply.getReplies();
+            }
+
+            if (parentReply != null) {
+                parentReply.getReplies().add(reply);
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reply path");
+            }
+        }
+
+        return forumThreadRepository.save(thread);
+    }
+
+    public ForumThread addReplyAsMidwife(String threadId, CreateReplyRequest request) {
+        Midwife midwife = SecurityUtils.getCurrentMidwife();
+        ForumThread thread = forumThreadRepository.findById(threadId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Forum thread not found"));
+
+        ForumReply reply = new ForumReply();
+        reply.setContent(request.getContent());
+        reply.setAuthorId(midwife.getId());
+        reply.setAuthorName(midwife.getName());
+        reply.setAuthorProfileImage(null); // Midwives may not have profile images
+        reply.setAuthorRole(ForumReply.AuthorRole.MIDWIFE);
+
+        if (request.getPath() == null || request.getPath().isEmpty()) {
+            // Replying to the main thread
+            thread.getReplies().add(reply);
+        } else {
+            // Replying to a nested reply
+            List<ForumReply> replies = thread.getReplies();
+            ForumReply parentReply = null;
+
+            for (String replyId : request.getPath()) {
+                parentReply = replies.stream()
+                        .filter(r -> r.getId().equals(replyId))
+                        .findFirst()
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parent reply not found in path"));
+                replies = parentReply.getReplies();
+            }
+
+            if (parentReply != null) {
+                parentReply.getReplies().add(reply);
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reply path");
+            }
+        }
 
         return forumThreadRepository.save(thread);
     }
