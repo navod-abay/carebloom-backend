@@ -75,6 +75,54 @@ public class PublicProductService {
     }
 
     /**
+     * Get active products by sectionId (sub-category) from approved vendors
+     */
+    public List<ProductResponse> getActiveProductsBySectionId(Integer sectionId) {
+        logger.info("Fetching active products by sectionId: {}", sectionId);
+
+        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
+        List<String> approvedVendorIds = approvedVendors.stream()
+                .map(Vendor::getId)
+                .collect(Collectors.toList());
+
+        List<Product> products = productRepository.findActiveProductsByVendorIdsAndSectionId(approvedVendorIds, sectionId);
+
+        return products.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    /**
+     * Search active products by name and sectionId from approved vendors
+     */
+    public List<ProductResponse> getActiveProductsBySectionIdAndName(Integer sectionId, String searchTerm) {
+        logger.info("Searching active products by sectionId: {} and name: {}", sectionId, searchTerm);
+
+        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
+        List<String> approvedVendorIds = approvedVendors.stream()
+                .map(Vendor::getId)
+                .collect(Collectors.toList());
+
+        List<Product> products = productRepository.findActiveProductsByVendorIdsAndSectionIdAndNameContaining(approvedVendorIds, sectionId, searchTerm);
+
+        return products.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    /**
+     * Advanced search: category + section + name
+     */
+    public List<ProductResponse> getActiveProductsByCategorySectionAndName(String category, Integer sectionId, String searchTerm) {
+        logger.info("Searching active products by category: {}, sectionId: {}, name: {}", category, sectionId, searchTerm);
+
+        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
+        List<String> approvedVendorIds = approvedVendors.stream()
+                .map(Vendor::getId)
+                .collect(Collectors.toList());
+
+        List<Product> products = productRepository.findActiveProductsByVendorIdsAndCategoryAndSectionIdAndNameContaining(approvedVendorIds, category, sectionId, searchTerm);
+
+        return products.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    /**
      * Search active products by name from approved vendors
      */
     public List<ProductResponse> getActiveProductsByName(String searchTerm) {
@@ -201,6 +249,7 @@ public class PublicProductService {
         response.setVendorId(product.getVendorId());
         response.setName(product.getName());
         response.setCategory(product.getCategory());
+        response.setSectionId(product.getSectionId());
         response.setPrice(product.getPrice());
         response.setStock(product.getStock());
         response.setStatus(product.getStatus());

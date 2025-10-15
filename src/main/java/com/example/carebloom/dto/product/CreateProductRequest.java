@@ -19,6 +19,9 @@ public class CreateProductRequest {
     @NotBlank(message = "Category is required")
     private String category;
     
+    // Optional section id to map to marketplaceCategorySections (e.g., 101 for Prenatal Vitamins)
+    private Integer sectionId;
+    
     @NotNull(message = "Price is required")
     @Positive(message = "Price must be positive")
     private Double price;
