@@ -28,8 +28,4 @@ public interface VendorRepository extends MongoRepository<Vendor, String> {
     // Fallback query using createdAt field (without @Field mapping)
     @Query("{'createdAt': {$gte: ?0, $lte: ?1}}")
     long countByCreatedAtBetweenFallback(LocalDateTime startDate, LocalDateTime endDate);
-
-    // Get total count of all vendors (for fallback when no date filtering works)
-    @Query(value = "{}", count = true)
-    long getTotalVendorCount();
 }

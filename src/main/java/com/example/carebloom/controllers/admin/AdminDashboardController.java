@@ -225,10 +225,7 @@ public class AdminDashboardController {
     @GetMapping("/month-admin-vendors-registrations")
     public ResponseEntity<AdminDashboardService.VendorRegistrationStats> getMonthlyVendorRegistrations() {
         try {
-            logger.info("Fetching monthly vendor registration statistics");
             AdminDashboardService.VendorRegistrationStats stats = dashboardService.getMonthlyVendorRegistrations();
-            logger.info("Successfully fetched monthly vendor stats: currentTotal={}, previousTotal={}",
-                    stats.getCurrentMonthTotal(), stats.getPreviousMonthTotal());
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             logger.error("Error fetching monthly vendor registrations: {}", e.getMessage(), e);
@@ -243,10 +240,7 @@ public class AdminDashboardController {
     @GetMapping("/year-admin-vendors-registrations")
     public ResponseEntity<AdminDashboardService.VendorYearlyStats> getYearlyVendorRegistrations() {
         try {
-            logger.info("Fetching yearly vendor registration statistics");
             AdminDashboardService.VendorYearlyStats stats = dashboardService.getYearlyVendorRegistrations();
-            logger.info("Successfully fetched yearly vendor stats: currentTotal={}, previousTotal={}",
-                    stats.getCurrentYearTotal(), stats.getPreviousYearTotal());
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             logger.error("Error fetching yearly vendor registrations: {}", e.getMessage(), e);
