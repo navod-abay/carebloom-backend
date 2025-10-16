@@ -34,18 +34,34 @@ public class PublicProductController {
     @GetMapping
     public ResponseEntity<?> getAllPublicProducts(
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String search) {
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer sectionId) {
         try {
-            logger.info("Fetching public products for mobile app - category: {}, search: {}", category, search);
+            logger.info("Fetching public products for mobile app - category: {}, sectionId: {}, search: {}", category, sectionId, search);
 
             List<ProductResponse> products;
             
-            if (search != null && !search.trim().isEmpty() && category != null && !category.trim().isEmpty()) {
-                // Search by name and category
+            // Prioritize combined filters: category + sectionId + search
+            if (search != null && !search.trim().isEmpty() && category != null && !category.trim().isEmpty() && sectionId != null) {
+                products = publicProductService.getActiveProductsByCategorySectionAndName(category, sectionId, search.trim());
+            } else if (search != null && !search.trim().isEmpty() && sectionId != null) {
+                // search + section
+                products = publicProductService.getActiveProductsBySectionIdAndName(sectionId, search.trim());
+            } else if (category != null && !category.trim().isEmpty() && sectionId != null) {
+                // category + section
+                // fallback to category filter if specific combination not required
+                products = publicProductService.getActiveProductsBySectionId(sectionId).stream()
+                        .filter(p -> category.equals(p.getCategory()))
+                        .collect(java.util.stream.Collectors.toList());
+            } else if (search != null && !search.trim().isEmpty() && category != null && !category.trim().isEmpty()) {
+                // existing name + category
                 products = publicProductService.getActiveProductsByNameAndCategory(search.trim(), category);
             } else if (search != null && !search.trim().isEmpty()) {
                 // Search by name only
                 products = publicProductService.getActiveProductsByName(search.trim());
+            } else if (sectionId != null) {
+                // Filter by sectionId only
+                products = publicProductService.getActiveProductsBySectionId(sectionId);
             } else if (category != null && !category.trim().isEmpty()) {
                 // Filter by category only
                 products = publicProductService.getActiveProductsByCategory(category);

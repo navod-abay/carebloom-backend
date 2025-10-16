@@ -15,6 +15,7 @@ public class ProductResponse {
     private String vendorId;
     private String name;
     private String category;
+    private Integer sectionId;
     private Double price;
     private Integer stock;
     private String status;

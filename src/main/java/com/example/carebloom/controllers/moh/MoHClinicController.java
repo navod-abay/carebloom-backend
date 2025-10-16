@@ -44,7 +44,10 @@ public class MoHClinicController {
             errorResponse.put("error", "Failed to retrieve clinics: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
+
     }
+
+    // Queue status endpoint moved to NewMoHQueueController
 
     /**
      * Get clinics by date for the current user's MoH office
@@ -173,5 +176,47 @@ public class MoHClinicController {
         }
     }
 
+    /**
+     * Add mothers to a clinic for queue management
+     */
+    @PostMapping("/clinics/{id}/mothers")
+    public ResponseEntity<?> addMothersToClinic(@PathVariable String id, @RequestBody List<String> motherIds) {
+        try {
+            Clinic updatedClinic = clinicService.addMothersToClinic(id, motherIds);
+            if (updatedClinic != null) {
+                return ResponseEntity.ok(Map.of("success", true, "data", updatedClinic));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "error", "Clinic not found or access denied"));
+            }
+        } catch (Exception e) {
+            logger.error("Error adding mothers to clinic", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "error", "Failed to add mothers to clinic: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Remove mother from a clinic
+     */
+    @DeleteMapping("/clinics/{id}/mothers/{motherId}")
+    public ResponseEntity<?> removeMotherFromClinic(@PathVariable String id, @PathVariable String motherId) {
+        try {
+            Clinic updatedClinic = clinicService.removeMotherFromClinic(id, motherId);
+            if (updatedClinic != null) {
+                return ResponseEntity.ok(Map.of("success", true, "data", updatedClinic));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "error", "Clinic or mother not found"));
+            }
+        } catch (Exception e) {
+            logger.error("Error removing mother from clinic", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "error", "Failed to remove mother from clinic: " + e.getMessage()));
+        }
+    }
+
+    // ===== Queue Management Endpoints =====
+    // Moved to NewMoHQueueController for cleaner implementation
     
 }

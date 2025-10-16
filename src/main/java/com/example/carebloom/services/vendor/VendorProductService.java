@@ -1,5 +1,6 @@
 package com.example.carebloom.services.vendor;
 
+import com.example.carebloom.config.CategorySectionRegistry;
 import com.example.carebloom.dto.product.CreateProductRequest;
 import com.example.carebloom.dto.product.ProductResponse;
 import com.example.carebloom.dto.product.UpdateProductRequest;
@@ -121,11 +122,17 @@ public class VendorProductService {
      */
     public ProductResponse createProduct(String vendorId, CreateProductRequest request) {
         logger.info("Creating product for vendor: {}", vendorId);
+
+        // Validate sectionId vs category mapping if provided
+        if (request.getSectionId() != null && !CategorySectionRegistry.isSectionValidForCategory(request.getSectionId(), request.getCategory())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sectionId is not valid for the selected category");
+        }
         
         Product product = new Product();
         product.setVendorId(vendorId);
         product.setName(request.getName());
         product.setCategory(request.getCategory());
+        product.setSectionId(request.getSectionId());
         product.setPrice(request.getPrice());
         product.setStock(request.getStock());
         product.setStatus(request.getStatus());
@@ -163,6 +170,7 @@ public class VendorProductService {
         // Update fields if provided
         if (request.getName() != null) product.setName(request.getName());
         if (request.getCategory() != null) product.setCategory(request.getCategory());
+        if (request.getSectionId() != null) product.setSectionId(request.getSectionId());
         if (request.getPrice() != null) product.setPrice(request.getPrice());
         if (request.getStock() != null) {
             product.setStock(request.getStock());
@@ -217,9 +225,13 @@ public class VendorProductService {
         long activeProducts = allProducts.stream().filter(p -> "active".equals(p.getStatus())).count();
         long outOfStockProducts = allProducts.stream().filter(p -> "out-of-stock".equals(p.getStatus())).count();
         long lowStockProducts = allProducts.stream()
-                .filter(p -> p.getStock() <= (p.getLowStockThreshold() != null ? p.getLowStockThreshold() : 10))
+                .filter(p -> {
+                    int stock = p.getStock() != null ? p.getStock() : 0;
+                    int threshold = p.getLowStockThreshold() != null ? p.getLowStockThreshold() : 10;
+                    return stock <= threshold;
+                })
                 .count();
-        
+
         return new ProductStatsResponse(totalProducts, activeProducts, outOfStockProducts, lowStockProducts);
     }
 
@@ -232,6 +244,7 @@ public class VendorProductService {
                 product.getVendorId(),
                 product.getName(),
                 product.getCategory(),
+                product.getSectionId(),
                 product.getPrice(),
                 product.getStock(),
                 product.getStatus(),
