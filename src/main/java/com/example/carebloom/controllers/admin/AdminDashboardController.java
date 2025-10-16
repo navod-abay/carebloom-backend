@@ -1,6 +1,5 @@
 package com.example.carebloom.controllers.admin;
 
-import com.example.carebloom.config.GoogleCloudConfig;
 import com.example.carebloom.services.admin.AdminDashboardService;
 
 import org.slf4j.Logger;
@@ -16,10 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/")
 @CrossOrigin(origins = "${app.cors.admin-origin}")
 public class AdminDashboardController {
-    @Autowired
-    private AdminDashboardService dashboardService;
 
     private static final Logger logger = LoggerFactory.getLogger(AdminDashboardController.class);
+
+    @Autowired
+    private AdminDashboardService dashboardService;
 
     /**
      * Get total count of mothers with accepted registration statuses
@@ -225,9 +225,13 @@ public class AdminDashboardController {
     @GetMapping("/month-admin-vendors-registrations")
     public ResponseEntity<AdminDashboardService.VendorRegistrationStats> getMonthlyVendorRegistrations() {
         try {
+            logger.info("Fetching monthly vendor registration statistics");
             AdminDashboardService.VendorRegistrationStats stats = dashboardService.getMonthlyVendorRegistrations();
+            logger.info("Successfully fetched monthly vendor stats: currentTotal={}, previousTotal={}",
+                    stats.getCurrentMonthTotal(), stats.getPreviousMonthTotal());
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
+            logger.error("Error fetching monthly vendor registrations: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -239,10 +243,13 @@ public class AdminDashboardController {
     @GetMapping("/year-admin-vendors-registrations")
     public ResponseEntity<AdminDashboardService.VendorYearlyStats> getYearlyVendorRegistrations() {
         try {
+            logger.info("Fetching yearly vendor registration statistics");
             AdminDashboardService.VendorYearlyStats stats = dashboardService.getYearlyVendorRegistrations();
-            logger.debug("Yearly vendor stats fetched: " + stats);
+            logger.info("Successfully fetched yearly vendor stats: currentTotal={}, previousTotal={}",
+                    stats.getCurrentYearTotal(), stats.getPreviousYearTotal());
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
+            logger.error("Error fetching yearly vendor registrations: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

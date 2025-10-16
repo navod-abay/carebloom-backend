@@ -479,7 +479,7 @@ public class AdminDashboardService {
 
             for (int day = 1; day <= daysInPreviousMonth; day++) {
                 try {
-                    LocalDateTime dayStart = LocalDateTime.of(previousMonthStart.getYear(), 
+                    LocalDateTime dayStart = LocalDateTime.of(previousMonthStart.getYear(),
                             previousMonthStart.getMonthValue(), day, 0, 0, 0);
                     LocalDateTime dayEnd = dayStart.plusDays(1).minusSeconds(1);
                     long count = midwifeRepository.countByCreatedAtBetween(dayStart, dayEnd);
@@ -504,7 +504,7 @@ public class AdminDashboardService {
             // Return empty stats to prevent total failure
             String currentMonthName = LocalDateTime.now().getMonth().name();
             String previousMonthName = LocalDateTime.now().minusMonths(1).getMonth().name();
-            return new MidwifeRegistrationStats(currentMonthName, new ArrayList<>(), 0, 
+            return new MidwifeRegistrationStats(currentMonthName, new ArrayList<>(), 0,
                     previousMonthName, new ArrayList<>(), 0);
         }
     }
@@ -561,7 +561,7 @@ public class AdminDashboardService {
             logger.error("Error getting yearly midwife registrations: {}", e.getMessage(), e);
             // Return empty stats to prevent total failure
             int currentYear = LocalDateTime.now().getYear();
-            return new MidwifeYearlyStats(currentYear, new ArrayList<>(), 0, 
+            return new MidwifeYearlyStats(currentYear, new ArrayList<>(), 0,
                     currentYear - 1, new ArrayList<>(), 0);
         }
     }
@@ -571,51 +571,70 @@ public class AdminDashboardService {
      * previous month)
      */
     public VendorRegistrationStats getMonthlyVendorRegistrations() {
-        LocalDateTime now = LocalDateTime.now();
-        int currentYear = now.getYear();
-        int currentMonth = now.getMonthValue();
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            int currentYear = now.getYear();
+            int currentMonth = now.getMonthValue();
 
-        // Current month: First day to last day
-        LocalDateTime currentMonthStart = LocalDateTime.of(currentYear, currentMonth, 1, 0, 0, 0);
+            // Current month: First day to last day
+            LocalDateTime currentMonthStart = LocalDateTime.of(currentYear, currentMonth, 1, 0, 0, 0);
 
-        // Get daily breakdown for current month
-        List<DailyData> currentMonthDays = new ArrayList<>();
-        long currentMonthTotal = 0;
-        int daysInCurrentMonth = currentMonthStart.toLocalDate().lengthOfMonth();
+            // Get daily breakdown for current month
+            List<DailyData> currentMonthDays = new ArrayList<>();
+            long currentMonthTotal = 0;
+            int daysInCurrentMonth = currentMonthStart.toLocalDate().lengthOfMonth();
 
-        for (int day = 1; day <= daysInCurrentMonth; day++) {
-            LocalDateTime dayStart = LocalDateTime.of(currentYear, currentMonth, day, 0, 0, 0);
-            LocalDateTime dayEnd = dayStart.plusDays(1).minusSeconds(1);
-            long count = vendorRepository.countByCreatedAtBetween(dayStart, dayEnd);
-            currentMonthDays.add(new DailyData(day, count));
-            currentMonthTotal += count;
+            for (int day = 1; day <= daysInCurrentMonth; day++) {
+                try {
+                    LocalDateTime dayStart = LocalDateTime.of(currentYear, currentMonth, day, 0, 0, 0);
+                    LocalDateTime dayEnd = dayStart.plusDays(1).minusSeconds(1);
+                    long count = getVendorCountWithFallback(dayStart, dayEnd);
+                    currentMonthDays.add(new DailyData(day, count));
+                    currentMonthTotal += count;
+                } catch (Exception e) {
+                    logger.warn("Error counting vendors for day {}: {}", day, e.getMessage());
+                    currentMonthDays.add(new DailyData(day, 0));
+                }
+            }
+
+            // Previous month
+            LocalDateTime previousMonthStart = currentMonthStart.minusMonths(1);
+
+            // Get daily breakdown for previous month
+            List<DailyData> previousMonthDays = new ArrayList<>();
+            long previousMonthTotal = 0;
+            int daysInPreviousMonth = previousMonthStart.toLocalDate().lengthOfMonth();
+
+            for (int day = 1; day <= daysInPreviousMonth; day++) {
+                try {
+                    LocalDateTime dayStart = LocalDateTime.of(previousMonthStart.getYear(),
+                            previousMonthStart.getMonthValue(), day, 0, 0, 0);
+                    LocalDateTime dayEnd = dayStart.plusDays(1).minusSeconds(1);
+                    long count = getVendorCountWithFallback(dayStart, dayEnd);
+                    previousMonthDays.add(new DailyData(day, count));
+                    previousMonthTotal += count;
+                } catch (Exception e) {
+                    logger.warn("Error counting vendors for previous month day {}: {}", day, e.getMessage());
+                    previousMonthDays.add(new DailyData(day, 0));
+                }
+            }
+
+            String currentMonthName = now.getMonth().name();
+            String previousMonthName = previousMonthStart.getMonth().name();
+
+            logger.info("Monthly vendor registrations - Current month ({}): {}, Previous month ({}): {}",
+                    currentMonthName, currentMonthTotal, previousMonthName, previousMonthTotal);
+
+            return new VendorRegistrationStats(currentMonthName, currentMonthDays, currentMonthTotal,
+                    previousMonthName, previousMonthDays, previousMonthTotal);
+        } catch (Exception e) {
+            logger.error("Error getting monthly vendor registrations: {}", e.getMessage(), e);
+            // Return empty stats to prevent total failure
+            String currentMonthName = LocalDateTime.now().getMonth().name();
+            String previousMonthName = LocalDateTime.now().minusMonths(1).getMonth().name();
+            return new VendorRegistrationStats(currentMonthName, new ArrayList<>(), 0,
+                    previousMonthName, new ArrayList<>(), 0);
         }
-
-        // Previous month
-        LocalDateTime previousMonthStart = currentMonthStart.minusMonths(1);
-
-        // Get daily breakdown for previous month
-        List<DailyData> previousMonthDays = new ArrayList<>();
-        long previousMonthTotal = 0;
-        int daysInPreviousMonth = previousMonthStart.toLocalDate().lengthOfMonth();
-
-        for (int day = 1; day <= daysInPreviousMonth; day++) {
-            LocalDateTime dayStart = LocalDateTime.of(previousMonthStart.getYear(), previousMonthStart.getMonthValue(),
-                    day, 0, 0, 0);
-            LocalDateTime dayEnd = dayStart.plusDays(1).minusSeconds(1);
-            long count = vendorRepository.countByCreatedAtBetween(dayStart, dayEnd);
-            previousMonthDays.add(new DailyData(day, count));
-            previousMonthTotal += count;
-        }
-
-        String currentMonthName = now.getMonth().name();
-        String previousMonthName = previousMonthStart.getMonth().name();
-
-        logger.info("Monthly vendor registrations - Current month ({}): {}, Previous month ({}): {}",
-                currentMonthName, currentMonthTotal, previousMonthName, previousMonthTotal);
-
-        return new VendorRegistrationStats(currentMonthName, currentMonthDays, currentMonthTotal,
-                previousMonthName, previousMonthDays, previousMonthTotal);
     }
 
     /**
@@ -623,38 +642,76 @@ public class AdminDashboardService {
      * previous year)
      */
     public VendorYearlyStats getYearlyVendorRegistrations() {
-        int currentYear = LocalDateTime.now().getYear();
-        int previousYear = currentYear - 1;
+        try {
+            int currentYear = LocalDateTime.now().getYear();
+            int previousYear = currentYear - 1;
 
-        // Get monthly breakdown for current year
-        List<MonthlyData> currentYearMonths = new ArrayList<>();
-        long currentYearTotal = 0;
+            // Get monthly breakdown for current year
+            List<MonthlyData> currentYearMonths = new ArrayList<>();
+            long currentYearTotal = 0;
 
-        for (int month = 1; month <= 12; month++) {
-            LocalDateTime monthStart = LocalDateTime.of(currentYear, month, 1, 0, 0, 0);
-            LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
-            long count = vendorRepository.countByCreatedAtBetween(monthStart, monthEnd);
-            currentYearMonths.add(new MonthlyData(Month.of(month).name(), count));
-            currentYearTotal += count;
+            for (int month = 1; month <= 12; month++) {
+                try {
+                    LocalDateTime monthStart = LocalDateTime.of(currentYear, month, 1, 0, 0, 0);
+                    LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
+                    long count = getVendorCountWithFallback(monthStart, monthEnd);
+                    currentYearMonths.add(new MonthlyData(Month.of(month).name(), count));
+                    currentYearTotal += count;
+                } catch (Exception e) {
+                    logger.warn("Error counting vendors for month {}: {}", month, e.getMessage());
+                    currentYearMonths.add(new MonthlyData(Month.of(month).name(), 0));
+                }
+            }
+
+            // Get monthly breakdown for previous year
+            List<MonthlyData> previousYearMonths = new ArrayList<>();
+            long previousYearTotal = 0;
+
+            for (int month = 1; month <= 12; month++) {
+                try {
+                    LocalDateTime monthStart = LocalDateTime.of(previousYear, month, 1, 0, 0, 0);
+                    LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
+                    long count = getVendorCountWithFallback(monthStart, monthEnd);
+                    previousYearMonths.add(new MonthlyData(Month.of(month).name(), count));
+                    previousYearTotal += count;
+                } catch (Exception e) {
+                    logger.warn("Error counting vendors for previous year month {}: {}", month, e.getMessage());
+                    previousYearMonths.add(new MonthlyData(Month.of(month).name(), 0));
+                }
+            }
+
+            logger.info("Yearly vendor registrations - Current year ({}): {}, Previous year ({}): {}",
+                    currentYear, currentYearTotal, previousYear, previousYearTotal);
+
+            return new VendorYearlyStats(currentYear, currentYearMonths, currentYearTotal,
+                    previousYear, previousYearMonths, previousYearTotal);
+        } catch (Exception e) {
+            logger.error("Error getting yearly vendor registrations: {}", e.getMessage(), e);
+            // Return empty stats to prevent total failure
+            int currentYear = LocalDateTime.now().getYear();
+            return new VendorYearlyStats(currentYear, new ArrayList<>(), 0,
+                    currentYear - 1, new ArrayList<>(), 0);
         }
+    }
 
-        // Get monthly breakdown for previous year
-        List<MonthlyData> previousYearMonths = new ArrayList<>();
-        long previousYearTotal = 0;
-
-        for (int month = 1; month <= 12; month++) {
-            LocalDateTime monthStart = LocalDateTime.of(previousYear, month, 1, 0, 0, 0);
-            LocalDateTime monthEnd = monthStart.plusMonths(1).minusSeconds(1);
-            long count = vendorRepository.countByCreatedAtBetween(monthStart, monthEnd);
-            previousYearMonths.add(new MonthlyData(Month.of(month).name(), count));
-            previousYearTotal += count;
+    /**
+     * Helper method to get vendor count with fallback strategies
+     */
+    private long getVendorCountWithFallback(LocalDateTime startDate, LocalDateTime endDate) {
+        try {
+            // First try with created_at field (new records with auditing)
+            return vendorRepository.countByCreatedAtBetween(startDate, endDate);
+        } catch (Exception e1) {
+            logger.warn("Primary vendor count query failed, trying fallback: {}", e1.getMessage());
+            try {
+                // Fallback to createdAt field (old records or different mapping)
+                return vendorRepository.countByCreatedAtBetweenFallback(startDate, endDate);
+            } catch (Exception e2) {
+                logger.warn("Fallback vendor count query failed: {}", e2.getMessage());
+                // If date filtering fails completely, return 0 for this time period
+                return 0;
+            }
         }
-
-        logger.info("Yearly vendor registrations - Current year ({}): {}, Previous year ({}): {}",
-                currentYear, currentYearTotal, previousYear, previousYearTotal);
-
-        return new VendorYearlyStats(currentYear, currentYearMonths, currentYearTotal,
-                previousYear, previousYearMonths, previousYearTotal);
     }
 
     // Inner classes for response DTOs
