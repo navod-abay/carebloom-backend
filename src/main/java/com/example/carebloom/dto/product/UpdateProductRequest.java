@@ -13,6 +13,7 @@ public class UpdateProductRequest {
     
     private String name;
     private String category;
+    private Integer sectionId;
     
     @Positive(message = "Price must be positive")
     private Double price;

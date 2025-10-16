@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,6 +194,12 @@ public class VendorProductController {
                             "success", true,
                             "data", product,
                             "message", "Product created successfully"));
+        } catch (ResponseStatusException e) {
+            logger.error("Validation error creating product", e);
+            return ResponseEntity.status(e.getStatus()).body(Map.of(
+                    "success", false,
+                    "error", e.getReason()
+            ));
         } catch (Exception e) {
             logger.error("Error creating product", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -221,6 +228,12 @@ public class VendorProductController {
                     "success", true,
                     "data", product,
                     "message", "Product updated successfully"));
+        } catch (ResponseStatusException e) {
+            logger.error("Validation error updating product {}", productId, e);
+            return ResponseEntity.status(e.getStatus()).body(Map.of(
+                    "success", false,
+                    "error", e.getReason()
+            ));
         } catch (Exception e) {
             logger.error("Error updating product with ID: {}", productId, e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
