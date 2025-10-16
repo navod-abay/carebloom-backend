@@ -22,6 +22,6 @@ public interface VendorRepository extends MongoRepository<Vendor, String> {
     boolean existsByBusinessRegistrationNumber(String businessRegistrationNumber);
 
     // Analytics queries for vendor registrations
-    @Query("{'createdAt': {$gte: ?0, $lte: ?1}}")
+    @Query("{'created_at': {$gte: ?0, $lte: ?1}}")
     long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
 }

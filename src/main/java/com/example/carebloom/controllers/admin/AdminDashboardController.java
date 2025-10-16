@@ -1,7 +1,10 @@
 package com.example.carebloom.controllers.admin;
 
+import com.example.carebloom.config.GoogleCloudConfig;
 import com.example.carebloom.services.admin.AdminDashboardService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -15,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminDashboardController {
     @Autowired
     private AdminDashboardService dashboardService;
+
+    private static final Logger logger = LoggerFactory.getLogger(AdminDashboardController.class);
 
     /**
      * Get total count of mothers with accepted registration statuses
@@ -235,6 +240,7 @@ public class AdminDashboardController {
     public ResponseEntity<AdminDashboardService.VendorYearlyStats> getYearlyVendorRegistrations() {
         try {
             AdminDashboardService.VendorYearlyStats stats = dashboardService.getYearlyVendorRegistrations();
+            logger.debug("Yearly vendor stats fetched: " + stats);
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
