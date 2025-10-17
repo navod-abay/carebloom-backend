@@ -48,6 +48,9 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private VendorRepository vendorRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.auth.allow-unregistered-mothers:false}")
+    private boolean allowUnregisteredMothers;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
             HttpServletResponse response,
@@ -60,32 +63,46 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
                 String token = authHeader.replace("Bearer ", "");
+                logger.debug("Token received for path: {}", path);
                 FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
                 String firebaseUid = decodedToken.getUid();
+                logger.debug("Firebase token verified, UID: {}", firebaseUid);
                 if (!firebaseUid.equals("anonymousUser")) {
                     logger.debug("Processing authentication for path: {}, UID: {}", path, firebaseUid);
 
                     // Path-based repository check - only query the relevant repository based on the
                     // path
                     if (path.startsWith("/api/v1/admin/")) {
+                        logger.debug("Matched admin path");
                         authenticateAdmin(firebaseUid);
                     } else if (path.startsWith("/api/v1/mothers/")) {
+                        logger.debug("Matched mothers path");
                         authenticateMother(firebaseUid);
                     } else if (path.startsWith("/api/v1/cart/")) {
                         // Cart endpoints are for mothers (customers)
+                        logger.debug("Matched cart path");
                         authenticateMother(firebaseUid);
                     } else if (path.startsWith("/api/v1/midwife/")) {
+                        logger.debug("Matched midwife path");
                         authenticateMidwife(firebaseUid);
                     } else if (path.startsWith("/api/v1/vendor/")) {
+                        logger.debug("Matched vendor path");
                         authenticateVendor(firebaseUid);
                     } else if (path.startsWith("/api/v1/moh/")) {
+                        logger.debug("Matched moh path");
                         authenticateMohUser(firebaseUid);
+                    } else {
+                        logger.warn("No path matched for: {}", path);
                     }
+                } else {
+                    logger.warn("Anonymous user detected for path: {}", path);
                 }
             } catch (Exception e) {
                 logger.error("Token verification failed for path: {}", path, e);
                 // Don't set authentication - let Spring Security handle the rejection
             }
+        } else {
+            logger.debug("No Bearer token found for path: {}", path);
         }
 
         filterChain.doFilter(request, response);
@@ -108,16 +125,28 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
      * Authenticate a mother user
      */
     private void authenticateMother(String firebaseUid) {
-        Mother mother = motherRepository.findByFirebaseUid(firebaseUid);
-        if (mother != null) {
-            setAuthentication(firebaseUid, "MOTHER", mother.getId(), mother);
-            logger.info("Authenticated mother: {}", firebaseUid);
-        } else {
-            logger.warn("User {} attempted to access mother resources but was not found in database. Creating temporary authentication for testing.", firebaseUid);
-            // For development/testing: allow cart access even if user not in mothers collection
-            // Create temporary authentication with Firebase UID as ID
-            setAuthentication(firebaseUid, "MOTHER", firebaseUid, null);
-            logger.info("Temporarily authenticated unknown mother: {}", firebaseUid);
+        try {
+            logger.debug("Authenticating mother with UID: {}", firebaseUid);
+            Mother mother = motherRepository.findByFirebaseUid(firebaseUid);
+            logger.debug("Mother lookup result: {}", mother != null ? "found" : "not found");
+            
+            if (mother != null) {
+                setAuthentication(firebaseUid, "MOTHER", mother.getId(), mother);
+                logger.info("Authenticated mother: {}", firebaseUid);
+            } else {
+                // User not found in mothers collection
+                if (allowUnregisteredMothers) {
+                    // DEV/TEST MODE: Allow temporary authentication
+                    logger.warn("DEV MODE: User {} not in mothers collection, granting temporary cart access. DISABLE IN PRODUCTION!", firebaseUid);
+                    setAuthentication(firebaseUid, "MOTHER", firebaseUid, null);
+                } else {
+                    // PRODUCTION MODE: Block access
+                    logger.error("PRODUCTION: User {} attempted cart access but not registered as mother. Access DENIED.", firebaseUid);
+                    // Don't set authentication - Spring Security will reject the request
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Exception during mother authentication for UID {}: {}", firebaseUid, e.getMessage(), e);
         }
     }
 

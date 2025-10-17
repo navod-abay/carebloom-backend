@@ -260,6 +260,125 @@ public class NewQueueService {
     }
 
     /**
+     * Remove a specific patient from the queue
+     */
+    public Map<String, Object> removePatientFromQueue(String clinicId, String patientId) {
+        logger.info("Removing patient {} from clinic {}", patientId, clinicId);
+        
+        // Find the patient
+        Optional<QueueUser> patientOpt = queueUserRepository.findById(patientId);
+        if (patientOpt.isEmpty()) {
+            throw new IllegalArgumentException("Patient not found in queue");
+        }
+        
+        QueueUser patient = patientOpt.get();
+        
+        // Verify patient belongs to this clinic
+        if (!patient.getClinicId().equals(clinicId)) {
+            throw new IllegalArgumentException("Patient does not belong to this clinic");
+        }
+        
+        int removedPosition = patient.getPosition();
+        String removedStatus = patient.getStatus();
+        
+        // Delete the patient
+        queueUserRepository.delete(patient);
+        logger.info("Removed patient {} (position: {}, status: {}) from clinic {}", 
+                   patient.getName(), removedPosition, removedStatus, clinicId);
+        
+        // If we removed the current patient (in-progress), promote the next waiting patient
+        if ("in-progress".equals(removedStatus)) {
+            Optional<QueueUser> nextPatientOpt = queueUserRepository.findFirstByClinicIdAndStatusOrderByPosition(clinicId, "waiting");
+            if (nextPatientOpt.isPresent()) {
+                QueueUser nextPatient = nextPatientOpt.get();
+                nextPatient.setStatus("in-progress");
+                nextPatient.setWaitTime(0);
+                queueUserRepository.save(nextPatient);
+                logger.info("Promoted patient {} to in-progress after removal", nextPatient.getName());
+            }
+        } else {
+            // Adjust positions for all patients after the removed one
+            List<QueueUser> patientsAfter = queueUserRepository.findByClinicIdOrderByPosition(clinicId)
+                .stream()
+                .filter(p -> p.getPosition() > removedPosition)
+                .toList();
+            
+            for (QueueUser p : patientsAfter) {
+                p.setPosition(p.getPosition() - 1);
+                queueUserRepository.save(p);
+            }
+            
+            if (!patientsAfter.isEmpty()) {
+                logger.info("Adjusted positions for {} patients after removal", patientsAfter.size());
+            }
+        }
+        
+        return Map.of(
+            "success", true,
+            "message", "Patient removed successfully",
+            "removedPatient", patient.getName()
+        );
+    }
+    
+    /**
+     * Reorder queue by updating patient positions
+     */
+    public Map<String, Object> reorderQueue(String clinicId, List<String> patientIds) {
+        logger.info("Reordering queue for clinic {} with {} patients", clinicId, patientIds.size());
+        
+        // Validate clinic exists
+        Optional<Clinic> clinicOpt = clinicRepository.findById(clinicId);
+        if (clinicOpt.isEmpty()) {
+            throw new IllegalArgumentException("Clinic not found");
+        }
+        
+        // Get all patients in the queue
+        List<QueueUser> allPatients = queueUserRepository.findByClinicIdOrderByPosition(clinicId);
+        
+        // Find current patient (in-progress) - they should always be first
+        QueueUser currentPatient = allPatients.stream()
+            .filter(p -> "in-progress".equals(p.getStatus()))
+            .findFirst()
+            .orElse(null);
+        
+        // Validate that all patient IDs exist and belong to this clinic
+        for (String patientId : patientIds) {
+            boolean found = allPatients.stream().anyMatch(p -> p.getId().equals(patientId));
+            if (!found) {
+                throw new IllegalArgumentException("Patient ID " + patientId + " not found in queue");
+            }
+        }
+        
+        // If there's a current patient, ensure they're first in the list
+        if (currentPatient != null && !patientIds.isEmpty()) {
+            if (!patientIds.get(0).equals(currentPatient.getId())) {
+                throw new IllegalArgumentException("Current patient (in-progress) must remain first in queue");
+            }
+        }
+        
+        // Update positions based on the new order
+        for (int i = 0; i < patientIds.size(); i++) {
+            String patientId = patientIds.get(i);
+            QueueUser patient = allPatients.stream()
+                .filter(p -> p.getId().equals(patientId))
+                .findFirst()
+                .orElseThrow();
+            
+            patient.setPosition(i + 1);
+            patient.setWaitTime(i * 15); // 15 min per appointment
+            queueUserRepository.save(patient);
+        }
+        
+        logger.info("Successfully reordered queue for clinic {}", clinicId);
+        
+        return Map.of(
+            "success", true,
+            "message", "Queue reordered successfully",
+            "updatedCount", patientIds.size()
+        );
+    }
+
+    /**
      * Clean up completed and no-show patients for a specific clinic
      */
     public Map<String, Object> cleanupCompletedPatients(String clinicId) {
