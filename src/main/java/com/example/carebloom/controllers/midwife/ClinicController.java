@@ -16,7 +16,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.example.carebloom.dto.clinics.ClinicMidwifeDTO;
 import com.example.carebloom.models.Midwife;
 import com.example.carebloom.services.ClinicService;
-import com.example.carebloom.utils.SecurityUtils;
 import com.example.carebloom.config.CustomAuthenticationToken;
 
 

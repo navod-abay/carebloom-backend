@@ -3,7 +3,6 @@ package com.example.carebloom.services.admin;
 import com.example.carebloom.dto.admin.PendingVendorResponse;
 import com.example.carebloom.models.Vendor;
 import com.example.carebloom.repositories.VendorRepository;
-import com.example.carebloom.services.admin.FirebaseUserService;
 import com.google.firebase.auth.UserRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

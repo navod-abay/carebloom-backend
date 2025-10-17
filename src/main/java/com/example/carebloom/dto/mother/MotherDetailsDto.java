@@ -3,6 +3,8 @@ package com.example.carebloom.dto.mother;
 import java.util.List;
 import lombok.Data;
 
+import com.example.carebloom.models.VisitRecord;
+
 @Data
 public class MotherDetailsDto {
     private String id;
@@ -16,18 +18,19 @@ public class MotherDetailsDto {
     private String district;
     private String mohOfficeId;
     private String recordNumber;
-    private HealthRecordsDto healthRecords;
+    private HealthRecordsDto healthDetails;
+    private VisitRecord latestVitalRecord;
     private List<ChildRecordDto> childRecords;
     private List<WorkshopDto> workshops;
     
     @Data
     public static class HealthRecordsDto {
-        private Object age; // Can be number or string
+        private int age;
         private String bloodType;
-        private String medicalHistory;
         private String allergies;
-        private String currentMedications;
-        private String emergencyContact;
+        private String emergencyContactName;
+        private String emergencyContactPhone;
+        private String pregnancyType;
     }
     
     @Data

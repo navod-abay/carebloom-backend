@@ -15,4 +15,7 @@ public interface FieldVisitRepository extends MongoRepository<FieldVisit, String
     
     @Query("{'midwifeId': ?0, 'status': ?1}")
     List<FieldVisit> findByMidwifeIdAndStatus(String midwifeId, String status);
+
+    @Query("{'midwifeId': ?0, 'status': { $in: ?1 }}")
+    List<FieldVisit> findByMidwifeIdAndStatusIn(String midwifeId, List<String> statuses);
 }

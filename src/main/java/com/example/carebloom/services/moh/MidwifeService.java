@@ -1,11 +1,14 @@
 package com.example.carebloom.services.moh;
 
+import com.example.carebloom.dto.fieldVisits.FieldVisitBasicDTO;
 import com.example.carebloom.dto.midwife.MidwifeBasicDTO;
 import com.example.carebloom.dto.midwife.MidwifeExtendedDTO;
 import com.example.carebloom.dto.mother.MotherBasicDTO;
+import com.example.carebloom.models.FieldVisit;
 import com.example.carebloom.models.Mother;
 import com.example.carebloom.models.Midwife;
 import com.example.carebloom.models.MoHOfficeUser;
+import com.example.carebloom.repositories.FieldVisitRepository;
 import com.example.carebloom.repositories.MidwifeRepository;
 import com.example.carebloom.repositories.MoHOfficeUserRepository;
 import com.example.carebloom.repositories.MotherRepository;
@@ -37,6 +40,9 @@ public class MidwifeService {
 
     @Autowired
     private MotherRepository motherRepository;
+
+    @Autowired
+    private FieldVisitRepository fieldVisitRepository;
 
     /**
      * Get all midwives for the MOH office user's office
@@ -255,6 +261,23 @@ public class MidwifeService {
                     .filter(m -> m != null)
                     .toList();
             dto.setAssignedMothers(assignedMothers);
+        }
+
+        // Get field visits with SCHEDULED, CALCULATED, or IN_PROGRESS status
+        List<String> statuses = List.of("SCHEDULED", "CALCULATED", "IN_PROGRESS");
+        List<FieldVisit> fieldVisits = fieldVisitRepository.findByMidwifeIdAndStatusIn(midwifeId, statuses);
+        if (fieldVisits != null && !fieldVisits.isEmpty()) {
+            List<FieldVisitBasicDTO> fieldVisitDTOs = fieldVisits.stream()
+                    .map(fv -> {
+                        FieldVisitBasicDTO fvDto = new FieldVisitBasicDTO();
+                        fvDto.setId(fv.getId());
+                        fvDto.setDate(fv.getDate());
+                        fvDto.setStartTime(fv.getStartTime());
+                        fvDto.setEndTime(fv.getEndTime());
+                        return fvDto;
+                    })
+                    .toList();
+            dto.setFieldVisits(fieldVisitDTOs);
         }
 
         return dto;
