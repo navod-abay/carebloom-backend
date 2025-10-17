@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -113,6 +114,49 @@ public class NewMoHQueueController {
             logger.error("Error processing next patient for clinic: " + clinicId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("success", false, "error", "Failed to process next patient"));
+        }
+    }
+
+    /**
+     * Remove a patient from the queue
+     */
+    @DeleteMapping("/clinics/{clinicId}/queue/patients/{patientId}")
+    public ResponseEntity<Map<String, Object>> removePatient(@PathVariable String clinicId, @PathVariable String patientId) {
+        try {
+            Map<String, Object> response = newQueueService.removePatientFromQueue(clinicId, patientId);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Error removing patient from queue: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error removing patient {} from clinic: {}", patientId, clinicId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "error", "Failed to remove patient from queue"));
+        }
+    }
+
+    /**
+     * Reorder the queue
+     */
+    @PutMapping("/clinics/{clinicId}/queue/reorder")
+    public ResponseEntity<Map<String, Object>> reorderQueue(@PathVariable String clinicId, @RequestBody Map<String, Object> requestBody) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> patientIds = (List<String>) requestBody.get("patientIds");
+            
+            if (patientIds == null || patientIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Patient IDs are required"));
+            }
+            
+            Map<String, Object> response = newQueueService.reorderQueue(clinicId, patientIds);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Error reordering queue: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error reordering queue for clinic: " + clinicId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "error", "Failed to reorder queue"));
         }
     }
 }

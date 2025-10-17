@@ -69,6 +69,7 @@ public class SecurityConfig {
                         // Role-based access
                         .requestMatchers("/api/v1/mothers/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/mother/**").hasRole("MOTHER")
+                        .requestMatchers("/api/v1/cart/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/admin/**").hasRole("PLATFORM_MANAGER")
                         .requestMatchers("/api/v1/midwife/**").hasRole("MIDWIFE")
                         .requestMatchers("/api/v1/vendor/**").hasRole("VENDOR")
