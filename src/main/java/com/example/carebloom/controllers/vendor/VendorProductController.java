@@ -3,9 +3,10 @@ package com.example.carebloom.controllers.vendor;
 import com.example.carebloom.dto.product.CreateProductRequest;
 import com.example.carebloom.dto.product.ProductResponse;
 import com.example.carebloom.dto.product.UpdateProductRequest;
-import com.example.carebloom.services.vendor.VendorProductService;
+import com.example.carebloom.services.vendors.VendorProductService;
 import com.example.carebloom.config.CustomAuthenticationToken;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -26,6 +27,7 @@ public class VendorProductController {
     private static final Logger logger = LoggerFactory.getLogger(VendorProductController.class);
 
     @Autowired
+    @Qualifier("vendorsProductService")
     private VendorProductService productService;
 
     /**
@@ -196,7 +198,7 @@ public class VendorProductController {
                             "message", "Product created successfully"));
         } catch (ResponseStatusException e) {
             logger.error("Validation error creating product", e);
-            return ResponseEntity.status(e.getStatus()).body(Map.of(
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
                     "success", false,
                     "error", e.getReason()
             ));
@@ -230,7 +232,7 @@ public class VendorProductController {
                     "message", "Product updated successfully"));
         } catch (ResponseStatusException e) {
             logger.error("Validation error updating product {}", productId, e);
-            return ResponseEntity.status(e.getStatus()).body(Map.of(
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
                     "success", false,
                     "error", e.getReason()
             ));
