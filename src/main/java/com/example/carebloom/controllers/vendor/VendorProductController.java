@@ -196,7 +196,7 @@ public class VendorProductController {
                             "message", "Product created successfully"));
         } catch (ResponseStatusException e) {
             logger.error("Validation error creating product", e);
-            return ResponseEntity.status(e.getStatus()).body(Map.of(
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
                     "success", false,
                     "error", e.getReason()
             ));
@@ -230,7 +230,7 @@ public class VendorProductController {
                     "message", "Product updated successfully"));
         } catch (ResponseStatusException e) {
             logger.error("Validation error updating product {}", productId, e);
-            return ResponseEntity.status(e.getStatus()).body(Map.of(
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
                     "success", false,
                     "error", e.getReason()
             ));

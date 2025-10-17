@@ -4,6 +4,7 @@ import com.example.carebloom.models.ForumQuestion;
 import com.example.carebloom.repositories.ForumQuestionRepository;
 import org.springframework.stereotype.Service;
 
+@Service
 public class ForumQuestionService {
     private final ForumQuestionRepository forumQuestionRepository;
     private final AiService aiService; // classification service

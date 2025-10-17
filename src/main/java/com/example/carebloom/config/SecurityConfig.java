@@ -63,6 +63,9 @@ public class SecurityConfig {
                         // Debug endpoints for development
                         .requestMatchers("/api/v1/debug/**").permitAll()
                         
+                        // Test endpoints (for development/testing)
+                        .requestMatchers("/api/v1/test/**").permitAll()
+                        
                         // Role-based access
                         .requestMatchers("/api/v1/mothers/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/mother/**").hasRole("MOTHER")
