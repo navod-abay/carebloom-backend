@@ -80,22 +80,45 @@ public class CartService {
     }
 
     /**
-     * Get user's cart items
+     * Get user's cart items (optimized to reduce N+1 queries)
      */
     public List<CartItemResponse> getCartItems(String userId) {
         logger.info("Fetching cart items for user: {}", userId);
 
         List<CartItem> cartItems = cartRepository.findByUserId(userId);
+        if (cartItems.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Extract all product IDs
+        List<String> productIds = cartItems.stream()
+                .map(CartItem::getProductId)
+                .collect(java.util.stream.Collectors.toList());
+
+        // Fetch all products in one query
+        List<Product> products = productRepository.findAllById(productIds);
+        
+        // Create a map for fast lookup
+        java.util.Map<String, Product> productMap = products.stream()
+                .collect(java.util.stream.Collectors.toMap(Product::getId, p -> p));
+
         List<CartItemResponse> responses = new ArrayList<>();
+        List<CartItem> itemsToDelete = new ArrayList<>();
 
         for (CartItem item : cartItems) {
-            Optional<Product> productOpt = productRepository.findById(item.getProductId());
-            if (productOpt.isPresent()) {
-                responses.add(mapToCartItemResponse(item, productOpt.get()));
+            Product product = productMap.get(item.getProductId());
+            if (product != null) {
+                responses.add(mapToCartItemResponse(item, product));
             } else {
-                // Product was deleted, remove from cart
-                cartRepository.delete(item);
+                // Product was deleted, mark for removal
+                itemsToDelete.add(item);
             }
+        }
+
+        // Delete orphaned cart items in batch
+        if (!itemsToDelete.isEmpty()) {
+            cartRepository.deleteAll(itemsToDelete);
+            logger.info("Removed {} orphaned cart items for user: {}", itemsToDelete.size(), userId);
         }
 
         return responses;
