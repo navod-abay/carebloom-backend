@@ -14,6 +14,10 @@ public interface QueueUserRepository extends MongoRepository<QueueUser, String> 
     
     Optional<QueueUser> findFirstByClinicIdAndStatus(String clinicId, String status);
     
+    Optional<QueueUser> findByClinicIdAndStatus(String clinicId, String status);
+    
+    Optional<QueueUser> findFirstByClinicIdAndStatusOrderByPosition(String clinicId, String status);
+    
     Optional<QueueUser> findByClinicIdAndPosition(String clinicId, int position);
     
     Optional<QueueUser> findByMotherIdAndClinicId(String motherId, String clinicId);

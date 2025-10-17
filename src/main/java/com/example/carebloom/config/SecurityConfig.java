@@ -49,8 +49,9 @@ public class SecurityConfig {
                         
                         // Queue management endpoints (public for testing/SSE)
                         .requestMatchers("/api/clinics/*/queue/events").permitAll() // SSE endpoint
-                        .requestMatchers("/api/v1/moh/clinics/*/queue/stream").permitAll() // MoH SSE endpoint
-                        .requestMatchers("/api/v1/clinics/*/queue/**").permitAll() // Direct clinic queue endpoints
+                        .requestMatchers("/api/v1/moh/clinics/*/queue/stream").permitAll() // MoH SSE endpoint  
+                        .requestMatchers("/api/clinics/*/queue/**").permitAll() // Direct clinic queue endpoints
+                        .requestMatchers("/api/v1/clinics/*/queue/**").permitAll() // V1 clinic queue endpoints
                         .requestMatchers("/api/v1/moh/clinics/*/queue/**").permitAll() // MOH queue endpoints
                         
                         // Content endpoints
@@ -62,16 +63,21 @@ public class SecurityConfig {
                         // Debug endpoints for development
                         .requestMatchers("/api/v1/debug/**").permitAll()
                         
+                        // Test endpoints (for development/testing)
+                        .requestMatchers("/api/v1/test/**").permitAll()
+                        
                         // Role-based access
                         .requestMatchers("/api/v1/mothers/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/mother/**").hasRole("MOTHER")
+                        .requestMatchers("/api/v1/cart/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/admin/**").hasRole("PLATFORM_MANAGER")
                         .requestMatchers("/api/v1/midwife/**").hasRole("MIDWIFE")
                         .requestMatchers("/api/v1/vendor/**").hasRole("VENDOR")
                         .requestMatchers("/api/v1/moh/**").hasAnyRole("MOH_OFFICE_USER", "MOH_OFFICE_ADMIN")
                         
-                        .anyRequest().authenticated());
-
+                        .anyRequest().authenticated()
+                );
+    
         return http.build();
     }
 }

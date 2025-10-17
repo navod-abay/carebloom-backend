@@ -19,6 +19,9 @@ public class CreateProductRequest {
     @NotBlank(message = "Category is required")
     private String category;
     
+    // Optional section id to map to marketplaceCategorySections (e.g., 101 for Prenatal Vitamins)
+    private Integer sectionId;
+    
     @NotNull(message = "Price is required")
     @Positive(message = "Price must be positive")
     private Double price;
@@ -30,10 +33,7 @@ public class CreateProductRequest {
     private String status = "active"; // default status
     
     private String description;
-    
-    @NotBlank(message = "Product image is required")
     private String imageUrl;
-    
     private String sku;
     private Double weight;
     private String dimensions;
