@@ -2,7 +2,6 @@ package com.example.carebloom.dto.moh;
 
 import com.example.carebloom.models.HealthDetails;
 import lombok.Data;
-import java.time.LocalDate;
 
 @Data
 public class AcceptMotherRequest {

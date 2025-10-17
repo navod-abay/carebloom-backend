@@ -1,7 +1,6 @@
 package com.example.carebloom.controllers.mother;
 
 import com.example.carebloom.dto.mother.ConfirmFieldVisitTimeRequest;
-import com.example.carebloom.models.FieldVisit;
 import com.example.carebloom.models.Mother;
 import com.example.carebloom.models.Mother.FieldVisitAppointment;
 import com.example.carebloom.services.mother.MotherFieldVisitService;
