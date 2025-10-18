@@ -47,10 +47,6 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private VendorRepository vendorRepository;
-
-    @org.springframework.beans.factory.annotation.Value("${app.auth.allow-unregistered-mothers:false}")
-    private boolean allowUnregisteredMothers;
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
             HttpServletResponse response,
@@ -134,16 +130,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
                 setAuthentication(firebaseUid, "MOTHER", mother.getId(), mother);
                 logger.info("Authenticated mother: {}", firebaseUid);
             } else {
-                // User not found in mothers collection
-                if (allowUnregisteredMothers) {
-                    // DEV/TEST MODE: Allow temporary authentication
-                    logger.warn("DEV MODE: User {} not in mothers collection, granting temporary cart access. DISABLE IN PRODUCTION!", firebaseUid);
-                    setAuthentication(firebaseUid, "MOTHER", firebaseUid, null);
-                } else {
-                    // PRODUCTION MODE: Block access
-                    logger.error("PRODUCTION: User {} attempted cart access but not registered as mother. Access DENIED.", firebaseUid);
-                    // Don't set authentication - Spring Security will reject the request
-                }
+                logger.warn("User {} attempted to access mother resources but was not found", firebaseUid);
             }
         } catch (Exception e) {
             logger.error("Exception during mother authentication for UID {}: {}", firebaseUid, e.getMessage(), e);
