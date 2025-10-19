@@ -68,6 +68,7 @@ public class SecurityConfig {
                         
                         // Vendor orders endpoint - MUST come BEFORE generic /api/v1/vendors/** pattern
                         .requestMatchers("/api/v1/vendors/*/orders").permitAll()
+                        .requestMatchers("/api/v1/vendors/*/orders/update-status").permitAll()
                         
                         // Role-based access
                         .requestMatchers("/api/v1/mothers/**").hasRole("MOTHER")
