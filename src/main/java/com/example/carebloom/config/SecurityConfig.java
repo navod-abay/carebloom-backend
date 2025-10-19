@@ -66,13 +66,19 @@ public class SecurityConfig {
                         // Test endpoints (for development/testing)
                         .requestMatchers("/api/v1/test/**").permitAll()
                         
+                        // Vendor orders endpoint - MUST come BEFORE generic /api/v1/vendors/** pattern
+                        .requestMatchers("/api/v1/vendors/*/orders").permitAll()
+                        .requestMatchers("/api/v1/vendors/*/orders/update-status").permitAll()
+                        
                         // Role-based access
                         .requestMatchers("/api/v1/mothers/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/mother/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/mother/cart/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/admin/**").hasRole("PLATFORM_MANAGER")
                         .requestMatchers("/api/v1/midwife/**").hasRole("MIDWIFE")
-                        .requestMatchers("/api/v1/vendor/**").hasRole("VENDOR")
+                        // Remove the generic vendor patterns that conflict with the specific orders endpoint
+                        // .requestMatchers("/api/v1/vendor/**").hasRole("VENDOR")
+                        // .requestMatchers("/api/v1/vendors/**").hasRole("VENDOR")
                         .requestMatchers("/api/v1/moh/**").hasAnyRole("MOH_OFFICE_USER", "MOH_OFFICE_ADMIN")
                         
                         .anyRequest().authenticated()

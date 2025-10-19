@@ -21,4 +21,7 @@ public interface CartRepository extends MongoRepository<CartItem, String> {
     
     // Count items in user's cart
     long countByUserId(String userId);
+
+    // Find cart items for a specific vendor
+    List<CartItem> findByVendorId(String vendorId);
 }
