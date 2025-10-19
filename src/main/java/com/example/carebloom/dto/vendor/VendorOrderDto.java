@@ -29,6 +29,17 @@ public class VendorOrderDto {
     private Double totalAmount;
     private String priorityLevel;
     private List<VendorOrderItemDto> items;
+    
+    // Additional order management fields
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime confirmedAt;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime deliveredAt;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime cancelledAt;
+    private String cancellationReason;
+    private String trackingNumber;
+    private String deliveryNotes;
 
     @Data
     @NoArgsConstructor
