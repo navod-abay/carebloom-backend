@@ -63,12 +63,12 @@ public class MidwifeMotherController {
     public ResponseEntity<Map<String, Object>> getMotherHealthDetails(@PathVariable String motherId) {
         Mother mother = motherRepository.findById(motherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mother not found"));
-        
+
         Optional<HealthDetails> healthDetailsOpt = healthDetailsRepository.findByMotherId(motherId);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("mother", mother);
-        
+
         if (healthDetailsOpt.isPresent()) {
             HealthDetails hd = healthDetailsOpt.get();
             System.out.println("DEBUG - Returning health details: " + hd);
@@ -77,7 +77,7 @@ public class MidwifeMotherController {
             System.out.println("DEBUG - No health details found for mother: " + motherId);
             response.put("healthDetails", null);
         }
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -108,7 +108,7 @@ public class MidwifeMotherController {
     public ResponseEntity<HealthDetails> createOrUpdateHealthDetails(
             @PathVariable String motherId,
             @RequestBody HealthDetails healthDetailsRequest) {
-        
+
         // Verify mother exists
         Mother mother = motherRepository.findById(motherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mother not found"));
@@ -141,6 +141,36 @@ public class MidwifeMotherController {
                     .updatedAt(LocalDateTime.now())
                     .build();
         }
+
+        healthDetails = healthDetailsRepository.save(healthDetails);
+        return ResponseEntity.ok(healthDetails);
+    }
+
+    /**
+     * Update health details for a mother (PUT endpoint)
+     */
+    @PutMapping("/{motherId}/health-details")
+    public ResponseEntity<HealthDetails> updateHealthDetails(
+            @PathVariable String motherId,
+            @RequestBody HealthDetails healthDetailsRequest) {
+
+        // Verify mother exists
+        motherRepository.findById(motherId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mother not found"));
+
+        // Find existing health details
+        HealthDetails healthDetails = healthDetailsRepository.findByMotherId(motherId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                    "Health details not found for this mother. Use POST to create."));
+
+        // Update fields
+        healthDetails.setAge(healthDetailsRequest.getAge());
+        healthDetails.setBloodType(healthDetailsRequest.getBloodType());
+        healthDetails.setAllergies(healthDetailsRequest.getAllergies());
+        healthDetails.setEmergencyContactName(healthDetailsRequest.getEmergencyContactName());
+        healthDetails.setEmergencyContactPhone(healthDetailsRequest.getEmergencyContactPhone());
+        healthDetails.setPregnancyType(healthDetailsRequest.getPregnancyType());
+        healthDetails.setUpdatedAt(LocalDateTime.now());
 
         healthDetails = healthDetailsRepository.save(healthDetails);
         return ResponseEntity.ok(healthDetails);
