@@ -65,8 +65,10 @@ public class VendorCartService {
             order.setOrderId(orderId);
             order.setCustomerId(first.getUserId());
             order.setOrderDate(first.getAddedAt() != null ? first.getAddedAt() : LocalDateTime.now());
-            order.setOrderStatus("pending");
-            order.setPaymentStatus("pending");
+            // Read orderStatus from cart item, default to "pending" if not set
+            order.setOrderStatus(first.getOrderStatus() != null ? first.getOrderStatus() : "pending");
+            // Read paymentStatus from cart item, default to "pending" if not set
+            order.setPaymentStatus(first.getPaymentStatus() != null ? first.getPaymentStatus() : "pending");
             order.setPaymentMethod("Cash on Delivery");
             order.setPriorityLevel("standard");
 
@@ -96,6 +98,14 @@ public class VendorCartService {
             order.setShippingCost(0.0);
             order.setTax(0.0);
             order.setTotalAmount(subtotal);
+            
+            // Set order management fields from first cart item (they should all be the same for grouped items)
+            order.setConfirmedAt(first.getConfirmedAt());
+            order.setDeliveredAt(first.getDeliveredAt());
+            order.setCancelledAt(first.getCancelledAt());
+            order.setCancellationReason(first.getCancellationReason());
+            order.setTrackingNumber(first.getTrackingNumber());
+            order.setDeliveryNotes(first.getDeliveryNotes());
 
             // Try to populate customer info from mothers collection using the Firebase UID stored in cart userId
             try {
