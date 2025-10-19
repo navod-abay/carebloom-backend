@@ -1,8 +1,10 @@
 package com.example.carebloom.controllers.midwife;
 
+import com.example.carebloom.models.HealthDetails;
 import com.example.carebloom.models.Mother;
 import com.example.carebloom.models.VitalRecord;
 import com.example.carebloom.services.midwife.VitalRecordService;
+import com.example.carebloom.repositories.HealthDetailsRepository;
 import com.example.carebloom.repositories.MotherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -10,9 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/midwife/mothers")
@@ -21,6 +25,9 @@ public class MidwifeMotherController {
 
     @Autowired
     private MotherRepository motherRepository;
+
+    @Autowired
+    private HealthDetailsRepository healthDetailsRepository;
 
     @Autowired
     private VitalRecordService vitalRecordService;
@@ -34,16 +41,17 @@ public class MidwifeMotherController {
         Mother mother = motherRepository.findById(motherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mother not found"));
 
+        // Get health details
+        Optional<HealthDetails> healthDetails = healthDetailsRepository.findByMotherId(motherId);
+
         // Get recent visits/vital records
         List<VitalRecord> recentVisits = vitalRecordService.getVisitRecordsByMotherId(motherId);
 
         // Build response
         Map<String, Object> response = new HashMap<>();
         response.put("mother", mother);
+        response.put("healthDetails", healthDetails.orElse(null));
         response.put("recentVisits", recentVisits);
-        
-        // You can add healthDetails here if you have a HealthDetails model
-        // response.put("healthDetails", healthDetailsService.getByMotherId(motherId));
 
         return ResponseEntity.ok(response);
     }
@@ -52,10 +60,33 @@ public class MidwifeMotherController {
      * Get mother health details (basic info without visits)
      */
     @GetMapping("/{motherId}/health-details")
-    public ResponseEntity<Mother> getMotherHealthDetails(@PathVariable String motherId) {
+    public ResponseEntity<Map<String, Object>> getMotherHealthDetails(@PathVariable String motherId) {
         Mother mother = motherRepository.findById(motherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mother not found"));
-        return ResponseEntity.ok(mother);
+        
+        Optional<HealthDetails> healthDetailsOpt = healthDetailsRepository.findByMotherId(motherId);
+        
+        // Debug logging
+        if (healthDetailsOpt.isPresent()) {
+            HealthDetails hd = healthDetailsOpt.get();
+            System.out.println("DEBUG - Health Details found:");
+            System.out.println("  ID: " + hd.getId());
+            System.out.println("  Mother ID: " + hd.getMotherId());
+            System.out.println("  Age: " + hd.getAge());
+            System.out.println("  Blood Type: " + hd.getBloodType());
+            System.out.println("  Allergies: " + hd.getAllergies());
+            System.out.println("  Emergency Contact: " + hd.getEmergencyContactName());
+            System.out.println("  Emergency Phone: " + hd.getEmergencyContactPhone());
+            System.out.println("  Pregnancy Type: " + hd.getPregnancyType());
+        } else {
+            System.out.println("DEBUG - No health details found for mother: " + motherId);
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("mother", mother);
+        response.put("healthDetails", healthDetailsOpt.orElse(null));
+        
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -76,5 +107,50 @@ public class MidwifeMotherController {
         Mother mother = motherRepository.findById(motherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mother not found"));
         return ResponseEntity.ok(mother);
+    }
+
+    /**
+     * Create or update health details for a mother
+     */
+    @PostMapping("/{motherId}/health-details")
+    public ResponseEntity<HealthDetails> createOrUpdateHealthDetails(
+            @PathVariable String motherId,
+            @RequestBody HealthDetails healthDetailsRequest) {
+        
+        // Verify mother exists
+        Mother mother = motherRepository.findById(motherId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mother not found"));
+
+        // Check if health details already exist
+        Optional<HealthDetails> existingHealthDetails = healthDetailsRepository.findByMotherId(motherId);
+
+        HealthDetails healthDetails;
+        if (existingHealthDetails.isPresent()) {
+            // Update existing record
+            healthDetails = existingHealthDetails.get();
+            healthDetails.setAge(healthDetailsRequest.getAge());
+            healthDetails.setBloodType(healthDetailsRequest.getBloodType());
+            healthDetails.setAllergies(healthDetailsRequest.getAllergies());
+            healthDetails.setEmergencyContactName(healthDetailsRequest.getEmergencyContactName());
+            healthDetails.setEmergencyContactPhone(healthDetailsRequest.getEmergencyContactPhone());
+            healthDetails.setPregnancyType(healthDetailsRequest.getPregnancyType());
+            healthDetails.setUpdatedAt(LocalDateTime.now());
+        } else {
+            // Create new record
+            healthDetails = HealthDetails.builder()
+                    .motherId(motherId)
+                    .age(healthDetailsRequest.getAge())
+                    .bloodType(healthDetailsRequest.getBloodType())
+                    .allergies(healthDetailsRequest.getAllergies())
+                    .emergencyContactName(healthDetailsRequest.getEmergencyContactName())
+                    .emergencyContactPhone(healthDetailsRequest.getEmergencyContactPhone())
+                    .pregnancyType(healthDetailsRequest.getPregnancyType())
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+        }
+
+        healthDetails = healthDetailsRepository.save(healthDetails);
+        return ResponseEntity.ok(healthDetails);
     }
 }
