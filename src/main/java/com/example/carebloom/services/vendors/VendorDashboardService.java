@@ -33,6 +33,7 @@ public class VendorDashboardService {
     public Map<String, Object> getMonthlyRevenue(String vendorId) {
         return getMonthlyAnalysis(vendorId, "revenue");
     }
+    // New method for monthly order status
 
     public Map<String, Object> getMonthlyOrderStatus(String vendorId) {
         return getMonthlyAnalysis(vendorId, "order-status");
