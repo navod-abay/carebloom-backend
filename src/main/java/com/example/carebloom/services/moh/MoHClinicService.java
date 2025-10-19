@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -123,6 +124,31 @@ public class MoHClinicService {
             clinic.setCreatedAt(LocalDateTime.now());
             clinic.setUpdatedAt(LocalDateTime.now());
             clinic.setActive(true);
+            
+            // Populate addedMothers array with full mother objects
+            if (request.getRegisteredMotherIds() != null && !request.getRegisteredMotherIds().isEmpty()) {
+                List<Mother> mothers = motherRepository.findAllById(request.getRegisteredMotherIds());
+                List<com.example.carebloom.models.AddedMother> addedMothers = new ArrayList<>();
+                
+                for (Mother mother : mothers) {
+                    // Only add mothers from the same MOH office
+                    if (mohOfficeId.equals(mother.getMohOfficeId())) {
+                        com.example.carebloom.models.AddedMother am = new com.example.carebloom.models.AddedMother();
+                        am.setId(mother.getId());
+                        am.setName(mother.getName());
+                        am.setEmail(mother.getEmail());
+                        am.setPhone(mother.getPhone());
+                        am.setDueDate(mother.getDueDate());
+                        am.setAge(25); // Default age, should be updated with actual age
+                        am.setRecordNumber(mother.getRecordNumber());
+                        addedMothers.add(am);
+                    }
+                }
+                
+                clinic.setAddedMothers(addedMothers);
+                logger.info("Added {} mothers to clinic with record numbers populated", addedMothers.size());
+            }
+            
             Clinic savedClinic = clinicRepository.save(clinic);
             return new CreateClinicResponse(true, "Clinic created successfully", savedClinic);
         } catch (Exception e) {
@@ -216,6 +242,7 @@ public class MoHClinicService {
                     am.setPhone(mother.getPhone());
                     am.setDueDate(mother.getDueDate());
                     am.setAge(25);
+                    am.setRecordNumber(mother.getRecordNumber()); // Set the record number
                     clinic.getAddedMothers().add(am);
                 }
             }
@@ -244,4 +271,68 @@ public class MoHClinicService {
     }
 
     // ===== Queue Management Methods moved to NewQueueService =====
+    
+    /**
+     * Migration method to update record numbers for existing clinics
+     * This fixes clinics where mothers were added before the recordNumber fix
+     */
+    public Map<String, Object> updateClinicRecordNumbers(String clinicId) {
+        try {
+            logger.info("Updating record numbers for clinic: {}", clinicId);
+            
+            String currentMohOfficeId = getCurrentUserMohOfficeId();
+            if (currentMohOfficeId == null) {
+                return Map.of("success", false, "error", "Could not determine MoH office");
+            }
+            
+            Optional<Clinic> clinicOpt = clinicRepository.findById(clinicId);
+            if (clinicOpt.isEmpty()) {
+                return Map.of("success", false, "error", "Clinic not found");
+            }
+            
+            Clinic clinic = clinicOpt.get();
+            if (!clinic.getMohOfficeId().equals(currentMohOfficeId)) {
+                return Map.of("success", false, "error", "Access denied");
+            }
+            
+            if (clinic.getAddedMothers() == null || clinic.getAddedMothers().isEmpty()) {
+                return Map.of("success", true, "message", "No mothers to update", "updated", 0);
+            }
+            
+            int updated = 0;
+            for (com.example.carebloom.models.AddedMother addedMother : clinic.getAddedMothers()) {
+                // Only update if recordNumber is null or empty
+                if (addedMother.getRecordNumber() == null || addedMother.getRecordNumber().isEmpty()) {
+                    // Find the mother by ID
+                    Optional<Mother> motherOpt = motherRepository.findById(addedMother.getId());
+                    if (motherOpt.isPresent()) {
+                        Mother mother = motherOpt.get();
+                        if (mother.getRecordNumber() != null && !mother.getRecordNumber().isEmpty()) {
+                            addedMother.setRecordNumber(mother.getRecordNumber());
+                            updated++;
+                            logger.info("Updated record number for mother: {} to {}", 
+                                       mother.getName(), mother.getRecordNumber());
+                        }
+                    }
+                }
+            }
+            
+            if (updated > 0) {
+                clinic.setUpdatedAt(LocalDateTime.now());
+                clinicRepository.save(clinic);
+                logger.info("Updated {} record numbers for clinic: {}", updated, clinicId);
+            }
+            
+            return Map.of(
+                "success", true, 
+                "message", "Record numbers updated successfully",
+                "updated", updated,
+                "total", clinic.getAddedMothers().size()
+            );
+        } catch (Exception e) {
+            logger.error("Error updating clinic record numbers", e);
+            return Map.of("success", false, "error", "Failed to update record numbers: " + e.getMessage());
+        }
+    }
 }
+

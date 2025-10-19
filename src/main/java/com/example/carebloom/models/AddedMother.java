@@ -10,4 +10,5 @@ public class AddedMother {
     private String phone;
     private String dueDate;
     private int age;
+    private String recordNumber;
 }

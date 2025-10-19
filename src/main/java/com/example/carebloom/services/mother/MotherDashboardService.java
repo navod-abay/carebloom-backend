@@ -35,6 +35,9 @@ public class MotherDashboardService {
     @Autowired
     private MidwifeRepository midwifeRepository;
 
+    @Autowired
+    private com.example.carebloom.services.mothers.MotherClinicService motherClinicService;
+
     public DashboardResponse getDashboardData(String firebaseUid) {
         try {
             logger.info("Fetching dashboard data for Firebase UID: {}", firebaseUid);
@@ -56,6 +59,9 @@ public class MotherDashboardService {
 
             // Get workshops for mother's MOH office
             response.setWorkshops(getWorkshops(mother.getMohOfficeId()));
+
+            // Get clinic appointments for the mother
+            response.setClinics(motherClinicService.getClinicAppointmentsForMother(firebaseUid));
 
             logger.info("Dashboard data successfully fetched for mother: {}", mother.getId());
             return response;
