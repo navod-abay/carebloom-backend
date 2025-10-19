@@ -66,25 +66,17 @@ public class MidwifeMotherController {
         
         Optional<HealthDetails> healthDetailsOpt = healthDetailsRepository.findByMotherId(motherId);
         
-        // Debug logging
-        if (healthDetailsOpt.isPresent()) {
-            HealthDetails hd = healthDetailsOpt.get();
-            System.out.println("DEBUG - Health Details found:");
-            System.out.println("  ID: " + hd.getId());
-            System.out.println("  Mother ID: " + hd.getMotherId());
-            System.out.println("  Age: " + hd.getAge());
-            System.out.println("  Blood Type: " + hd.getBloodType());
-            System.out.println("  Allergies: " + hd.getAllergies());
-            System.out.println("  Emergency Contact: " + hd.getEmergencyContactName());
-            System.out.println("  Emergency Phone: " + hd.getEmergencyContactPhone());
-            System.out.println("  Pregnancy Type: " + hd.getPregnancyType());
-        } else {
-            System.out.println("DEBUG - No health details found for mother: " + motherId);
-        }
-        
         Map<String, Object> response = new HashMap<>();
         response.put("mother", mother);
-        response.put("healthDetails", healthDetailsOpt.orElse(null));
+        
+        if (healthDetailsOpt.isPresent()) {
+            HealthDetails hd = healthDetailsOpt.get();
+            System.out.println("DEBUG - Returning health details: " + hd);
+            response.put("healthDetails", hd);
+        } else {
+            System.out.println("DEBUG - No health details found for mother: " + motherId);
+            response.put("healthDetails", null);
+        }
         
         return ResponseEntity.ok(response);
     }
