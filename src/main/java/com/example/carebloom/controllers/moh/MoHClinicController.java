@@ -216,6 +216,26 @@ public class MoHClinicController {
         }
     }
 
+    /**
+     * Update record numbers for mothers in a clinic
+     * This is a migration endpoint to fix existing clinics
+     */
+    @PostMapping("/clinics/{id}/update-record-numbers")
+    public ResponseEntity<?> updateClinicRecordNumbers(@PathVariable String id) {
+        try {
+            Map<String, Object> result = clinicService.updateClinicRecordNumbers(id);
+            if ((Boolean) result.get("success")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
+        } catch (Exception e) {
+            logger.error("Error updating clinic record numbers", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "error", "Failed to update record numbers: " + e.getMessage()));
+        }
+    }
+
     // ===== Queue Management Endpoints =====
     // Moved to NewMoHQueueController for cleaner implementation
     

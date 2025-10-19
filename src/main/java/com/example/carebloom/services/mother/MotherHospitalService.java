@@ -34,7 +34,12 @@ public class MotherHospitalService {
     @Autowired
     private WorkshopRepository workshopRepository;
 
-    
+    @Autowired
+    private UnitRepository unitRepository;
+
+    @Autowired
+    private QueueUserRepository queueUserRepository;
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     public HospitalDashboardDto getMotherHospitalDashboard() {
@@ -75,6 +80,14 @@ public class MotherHospitalService {
                 midwifeDto.setName(midwife.getName());
                 midwifeDto.setPhone(midwife.getPhone());
                 midwifeDto.setEmail(midwife.getEmail());
+                
+                // Get unit name if mother has a unitId
+                if (mother.getUnitId() != null) {
+                    unitRepository.findById(mother.getUnitId()).ifPresent(unit -> {
+                        midwifeDto.setUnit(unit.getName());
+                    });
+                }
+                
                 dashboard.setMidwife(midwifeDto);
             });
         }
@@ -120,6 +133,35 @@ public class MotherHospitalService {
                 dto.setTitle(clinic.getTitle());
                 dto.setDoctorName(clinic.getDoctorName());
                 dto.setLocation(clinic.getLocation());
+                
+                // Set queue information
+                boolean queueActive = "open".equalsIgnoreCase(clinic.getQueueStatus());
+                dto.setQueueActive(queueActive);
+                
+                if (queueActive && clinic.getAddedMothers() != null) {
+                    // Find mother's queue number
+                    for (int i = 0; i < clinic.getAddedMothers().size(); i++) {
+                        if (mother.getId().equals(clinic.getAddedMothers().get(i).getId())) {
+                            dto.setQueueNumber(i + 1); // Queue numbers start from 1
+                            break;
+                        }
+                    }
+                    
+                    // Get current queue number from the queue system
+                    dto.setCurrentQueueNumber(getCurrentQueueNumber(clinic.getId()));
+                    
+                    // Calculate estimated wait time (simplified)
+                    if (dto.getQueueNumber() != null && dto.getCurrentQueueNumber() != null) {
+                        int waitingPatients = dto.getQueueNumber() - dto.getCurrentQueueNumber();
+                        if (waitingPatients > 0) {
+                            int estimatedMinutes = waitingPatients * 15; // Assume 15 minutes per patient
+                            dto.setEstimatedWaitTime(estimatedMinutes + " mins");
+                        } else {
+                            dto.setEstimatedWaitTime("Your turn!");
+                        }
+                    }
+                }
+                
                 return dto;
             })
             .collect(Collectors.toList());
@@ -148,5 +190,13 @@ public class MotherHospitalService {
                 return dto;
             })
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Get the current queue number (patient being served)
+     */
+    private Integer getCurrentQueueNumber(String clinicId) {
+        java.util.Optional<QueueUser> currentPatient = queueUserRepository.findByClinicIdAndStatus(clinicId, "in-progress");
+        return currentPatient.map(QueueUser::getPosition).orElse(null);
     }
 }
