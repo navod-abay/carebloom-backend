@@ -3,6 +3,7 @@ package com.example.carebloom.controllers.mother;
 import com.example.carebloom.dto.mother.PhotoUploadUrlRequest;
 import com.example.carebloom.dto.mother.PhotoUploadUrlResponse;
 import com.example.carebloom.dto.mother.PhotoConfirmRequest;
+import com.example.carebloom.dto.mother.MotherBasicProfileResponse;
 import com.example.carebloom.models.Mother;
 import com.example.carebloom.repositories.MotherRepository;
 import com.example.carebloom.services.GoogleCloudStorageService;
@@ -38,13 +39,12 @@ public class MotherProfileController {
     @Autowired
     private MotherRepository motherRepository;
 
-    @Operation(summary = "Generate photo upload URL", 
-               description = "Generate a signed URL for uploading profile photo to Google Cloud Storage")
+    @Operation(summary = "Generate photo upload URL", description = "Generate a signed URL for uploading profile photo to Google Cloud Storage")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Upload URL generated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid file name or unsupported file type"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Upload URL generated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid file name or unsupported file type"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/profile/photo/upload-url")
     public ResponseEntity<?> generatePhotoUploadUrl(@Valid @RequestBody PhotoUploadUrlRequest request) {
@@ -52,47 +52,45 @@ public class MotherProfileController {
             Mother currentMother = SecurityUtils.getCurrentMother();
             if (currentMother == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(createErrorResponse("Authentication required"));
+                        .body(createErrorResponse("Authentication required"));
             }
 
             logger.info("Generating photo upload URL for mother: {}", currentMother.getId());
 
             // Generate signed URL
             URL uploadUrl = gcsService.generateUploadUrl(
-                currentMother.getId(), 
-                request.getFileName()
-            );
+                    currentMother.getId(),
+                    request.getFileName());
 
             // Create response
             PhotoUploadUrlResponse response = PhotoUploadUrlResponse.builder()
-                .uploadUrl(uploadUrl.toString())
-                .expiresAt(LocalDateTime.now().plusMinutes(15))
-                .build();
+                    .uploadUrl(uploadUrl.toString())
+                    .expiresAt(LocalDateTime.now().plusMinutes(15))
+                    .build();
 
-            logger.info("Successfully generated upload URL for mother: {}", 
-                       currentMother.getId());
+            logger.info("Successfully generated upload URL for mother: {}",
+                    currentMother.getId());
 
             return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException e) {
             logger.warn("Validation error: {}", e.getMessage());
             return ResponseEntity.badRequest()
-                .body(createErrorResponse(e.getMessage()));
+                    .body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error generating upload URL: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(createErrorResponse("Failed to generate upload URL"));
+                    .body(createErrorResponse("Failed to generate upload URL"));
         }
     }
 
-    @Operation(summary = "Confirm photo upload", 
-               description = "Confirm that photo has been uploaded and update mother's profile")
+    @Operation(summary = "Confirm photo upload", description = "Confirm that photo has been uploaded and update mother's profile")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Photo upload confirmed successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid photoId or file not found"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "Upload record not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Photo upload confirmed successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid photoId or file not found"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Upload record not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping("/profile/photo/confirm")
     public ResponseEntity<?> confirmPhotoUpload(@Valid @RequestBody PhotoConfirmRequest request) {
@@ -100,7 +98,7 @@ public class MotherProfileController {
             Mother currentMother = SecurityUtils.getCurrentMother();
             if (currentMother == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(createErrorResponse("Authentication required"));
+                        .body(createErrorResponse("Authentication required"));
             }
 
             logger.info("Confirming photo upload for mother: {}", currentMother.getId());
@@ -108,10 +106,10 @@ public class MotherProfileController {
             // Verify the file exists in GCS
             boolean fileExists = gcsService.fileExists(currentMother.getId(), request.getFileName());
             if (!fileExists) {
-                logger.warn("File not found in GCS for mother: {}, fileName: {}", 
-                           currentMother.getId(), request.getFileName());
+                logger.warn("File not found in GCS for mother: {}, fileName: {}",
+                        currentMother.getId(), request.getFileName());
                 return ResponseEntity.badRequest()
-                    .body(createErrorResponse("File not found in storage"));
+                        .body(createErrorResponse("File not found in storage"));
             }
 
             // Update mother's profile with photo information
@@ -129,17 +127,16 @@ public class MotherProfileController {
         } catch (Exception e) {
             logger.error("Error confirming photo upload: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(createErrorResponse("Failed to confirm photo upload"));
+                    .body(createErrorResponse("Failed to confirm photo upload"));
         }
     }
 
-    @Operation(summary = "Delete profile photo", 
-               description = "Delete the mother's profile photo from storage and update profile")
+    @Operation(summary = "Delete profile photo", description = "Delete the mother's profile photo from storage and update profile")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Photo deleted successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "No profile photo to delete"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "200", description = "Photo deleted successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "No profile photo to delete"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @DeleteMapping("/profile/photo")
     public ResponseEntity<?> deleteProfilePhoto() {
@@ -147,7 +144,7 @@ public class MotherProfileController {
             Mother currentMother = SecurityUtils.getCurrentMother();
             if (currentMother == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(createErrorResponse("Authentication required"));
+                        .body(createErrorResponse("Authentication required"));
             }
 
             logger.info("Deleting profile photo for mother: {}", currentMother.getId());
@@ -155,7 +152,7 @@ public class MotherProfileController {
             // Check if mother has a profile photo
             if (currentMother.getProfilePhotoUrl() == null || currentMother.getProfilePhotoUrl().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(createErrorResponse("No profile photo to delete"));
+                        .body(createErrorResponse("No profile photo to delete"));
             }
 
             // Extract filename from URL to delete from GCS
@@ -180,7 +177,38 @@ public class MotherProfileController {
         } catch (Exception e) {
             logger.error("Error deleting profile photo: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(createErrorResponse("Failed to delete profile photo"));
+                    .body(createErrorResponse("Failed to delete profile photo"));
+        }
+    }
+
+    @Operation(summary = "Get basic profile information", description = "Get authenticated mother's basic profile information (name, address, phone, email)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Mother profile not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/profile")
+    public ResponseEntity<?> getBasicProfile() {
+        try {
+            Mother currentMother = SecurityUtils.getCurrentMother();
+
+            logger.info("Retrieving basic profile for mother: {}", currentMother.getId());
+
+            // Create response DTO with only the requested fields
+            MotherBasicProfileResponse response = new MotherBasicProfileResponse();
+            response.setFullName(currentMother.getName());
+            response.setAddress(currentMother.getAddress());
+            response.setPhoneNumber(currentMother.getPhone());
+            response.setEmail(currentMother.getEmail());
+
+            logger.info("Successfully retrieved basic profile for mother: {}", currentMother.getId());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error retrieving basic profile: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("Failed to retrieve profile information"));
         }
     }
 
@@ -201,9 +229,10 @@ public class MotherProfileController {
         if (url == null || url.isEmpty()) {
             return null;
         }
-        
+
         try {
-            // Extract filename from URL like: https://storage.googleapis.com/bucket/profiles/userId/filename.jpg
+            // Extract filename from URL like:
+            // https://storage.googleapis.com/bucket/profiles/userId/filename.jpg
             String[] parts = url.split("/");
             return parts[parts.length - 1];
         } catch (Exception e) {

@@ -73,7 +73,7 @@ public class SecurityConfig {
                         // Role-based access
                         .requestMatchers("/api/v1/mothers/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/mother/**").hasRole("MOTHER")
-                        .requestMatchers("/api/v1/cart/**").hasRole("MOTHER")
+                        .requestMatchers("/api/v1/mother/cart/**").hasRole("MOTHER")
                         .requestMatchers("/api/v1/admin/**").hasRole("PLATFORM_MANAGER")
                         .requestMatchers("/api/v1/midwife/**").hasRole("MIDWIFE")
                         // Remove the generic vendor patterns that conflict with the specific orders endpoint

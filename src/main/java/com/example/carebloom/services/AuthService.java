@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
-    
+
     @Autowired
     private MotherRepository motherRepository;
 
@@ -31,7 +31,7 @@ public class AuthService {
     public MotherProfile verifyIdToken(String idToken) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-        
+
         Mother mother = motherRepository.findByFirebaseUid(decodedToken.getUid());
         if (mother == null) {
             throw new RuntimeException("User not found");
@@ -43,7 +43,7 @@ public class AuthService {
     public MotherProfile registerMother(String idToken, String email) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-        
+
         // Check if user already exists
         Mother existingMother = motherRepository.findByFirebaseUid(decodedToken.getUid());
         if (existingMother != null) {
@@ -55,26 +55,26 @@ public class AuthService {
         mother.setEmail(email);
         mother.setFirebaseUid(decodedToken.getUid());
         mother.setRegistrationStatus("initial");
-        
+
         // Save to MongoDB
         mother = motherRepository.save(mother);
-        
+
         return createMotherProfile(mother);
     }
-    
+
     public MotherProfile skipLocation(String idToken) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-        
+
         Mother mother = motherRepository.findByFirebaseUid(decodedToken.getUid());
         if (mother == null) {
             throw new RuntimeException("User not found");
         }
-        
+
         if (!"location_pending".equals(mother.getRegistrationStatus())) {
             throw new RuntimeException("Invalid registration step");
         }
-        
+
         mother.setRegistrationStatus("normal");
         mother = motherRepository.save(mother);
         return createMotherProfile(mother);
@@ -83,75 +83,75 @@ public class AuthService {
     public MotherProfile updateLocation(String idToken, LocationRegistrationRequest request) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-        
+
         Mother mother = motherRepository.findByFirebaseUid(decodedToken.getUid());
         if (mother == null) {
             throw new RuntimeException("User not found");
         }
-        
-        // Allow location update if status is  or normal
+
+        // Allow location update if status is or normal
         if (!"location_pending".equals(mother.getRegistrationStatus()) &&
-            !"normal".equals(mother.getRegistrationStatus())) {
+                !"normal".equals(mother.getRegistrationStatus())) {
             throw new RuntimeException("Invalid registration step");
         }
-        
+
         // Update basic location information
         mother.setDistrict(request.getDistrict());
         mother.setMohOfficeId(request.getMohOfficeId());
         mother.setRecordNumber(request.getRecordNumber());
         mother.setAreaMidwifeId(request.getAreaMidwifeId());
         mother.setUnitId(request.getUnitId());
-        
+
         // Update GPS coordinates if provided
         if (request.getLocation() != null) {
             mother.setLatitude(request.getLocation().getLatitude());
             mother.setLongitude(request.getLocation().getLongitude());
-            
+
             // Create a readable address description for verification
             if (request.getLocation().getLatitude() != null && request.getLocation().getLongitude() != null) {
-                String gpsAddress = String.format("GPS: %.6f, %.6f", 
-                    request.getLocation().getLatitude(), 
-                    request.getLocation().getLongitude());
-                
+                String gpsAddress = String.format("GPS: %.6f, %.6f",
+                        request.getLocation().getLatitude(),
+                        request.getLocation().getLongitude());
+
                 // Add accuracy info if available
                 if (request.getLocation().getAccuracy() != null) {
                     gpsAddress += String.format(" (±%.1fm)", request.getLocation().getAccuracy());
                 }
-                
+
                 mother.setLocationAddress(gpsAddress);
             }
         }
-        
+
         mother.setRegistrationStatus("complete");
-        
+
         mother = motherRepository.save(mother);
         return createMotherProfile(mother);
     }
-    
+
     public MotherProfile updatePersonalInfo(String idToken, PersonalRegistrationRequest request) throws Exception {
         String token = idToken.replace("Bearer ", "");
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-        
+
         Mother mother = motherRepository.findByFirebaseUid(decodedToken.getUid());
         if (mother == null) {
             throw new RuntimeException("User not found");
         }
-        
+
         // Allow personal info update if status is initial
         if (!"initial".equals(mother.getRegistrationStatus())) {
             throw new RuntimeException("Invalid registration step");
         }
-        
+
         mother.setName(request.getName());
         mother.setDueDate(request.getDueDate());
         mother.setPhone(request.getPhone());
         mother.setAddress(request.getAddress());
         mother.setRegistrationStatus("picture");
-        
+
         mother = motherRepository.save(mother);
         return createMotherProfile(mother);
     }
-    
+
     public MotherProfile getProfileByFirebaseUid(String firebaseUid) {
         Mother mother = motherRepository.findByFirebaseUid(firebaseUid);
         if (mother == null) {
