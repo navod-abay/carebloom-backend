@@ -67,8 +67,13 @@ public class Mother {
     public static class FieldVisitAppointment {
         private String visitId; // Reference to FieldVisit ID
         private String date; // ISO date string (YYYY-MM-DD)
-        private String startTime; // HH:MM format
-        private String endTime; // HH:MM format
+        private String startTime; // HH:MM format - Original preferred time
+        private String endTime; // HH:MM format - Original preferred end time
+        
+        // NEW: Calculated optimal times
+        private String scheduledStartTime; // HH:MM - Calculated by optimization
+        private String scheduledEndTime;   // HH:MM - Calculated by optimization
+        
         private String status; // "new", "confirmed", "ordered", "ongoing", "completed", "rescheduled"
     }
 }

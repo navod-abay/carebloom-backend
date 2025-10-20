@@ -17,15 +17,27 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class ForumService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ForumService.class);
 
     @Autowired
     private ForumThreadRepository forumThreadRepository;
 
+    @Autowired
+    private TextClassificationService textClassificationService;
+
     public ForumThread createThread(CreateForumThreadRequest request) {
+        logger.info("Creating new forum thread. Title: '{}', Content length: {} chars", 
+                   request.getTitle(), request.getContent() != null ? request.getContent().length() : 0);
         
         Mother mother = SecurityUtils.getCurrentMother();
+        logger.debug("Thread author: {} (ID: {})", mother.getName(), mother.getId());
+        
         ForumThread thread = new ForumThread();
         thread.setTitle(request.getTitle());
         thread.setContent(request.getContent());
@@ -35,14 +47,39 @@ public class ForumService {
 
         // Determine category
         boolean isMedical;
-        if (request.getIsMedical() != null) {
-            isMedical = request.getIsMedical();
+        if (request.getIsMedical() != null && request.getIsMedical() == true) {
+            // User explicitly marked as medical - trust the user, no need for AI
+            logger.info("User explicitly marked thread as MEDICAL - skipping AI classification");
+            isMedical = true;
         } else {
-            isMedical = isMedicalQuestion(request.getTitle(), request.getContent());
+            // Either user marked as non-medical (false) or didn't specify (null)
+            // In both cases, use AI to classify for safety
+            if (request.getIsMedical() != null && request.getIsMedical() == false) {
+                logger.info("User marked as NON-MEDICAL, but using AI model to double-check for safety");
+            } else {
+                logger.info("No medical classification provided, using AI model to determine category");
+            }
+            
+            boolean aiClassification = isMedicalQuestion(request.getTitle(), request.getContent());
+            
+            if (request.getIsMedical() != null && request.getIsMedical() == false && aiClassification == true) {
+                // User said non-medical, but AI detected medical - prioritize safety
+                logger.warn("User classified as NON-MEDICAL but AI detected MEDICAL content - defaulting to MEDICAL for safety");
+                isMedical = true;
+            } else {
+                // Use AI classification result
+                isMedical = aiClassification;
+            }
         }
-        thread.setCategory(isMedical ? ForumThread.Category.MEDICAL : ForumThread.Category.NON_MEDICAL);
+        
+        ForumThread.Category category = isMedical ? ForumThread.Category.MEDICAL : ForumThread.Category.NON_MEDICAL;
+        thread.setCategory(category);
+        logger.info("Thread categorized as: {}", category);
 
-        return forumThreadRepository.save(thread);
+        ForumThread savedThread = forumThreadRepository.save(thread);
+        logger.info("Forum thread created successfully with ID: {}", savedThread.getId());
+        
+        return savedThread;
     }
 
     public ForumThread addReply(String threadId, CreateReplyRequest request) {
@@ -190,13 +227,40 @@ public class ForumService {
     }
 
     /**
-     * Placeholder for AI model to detect if a question is medical.
+     * Uses AI model to detect if a question is medical.
      * @param title The title of the thread.
      * @param content The content of the thread.
      * @return True if the question is determined to be medical, false otherwise.
      */
     private boolean isMedicalQuestion(String title, String content) {
-        // TODO: Implement AI model for medical question detection
-        return true; // Returning true for now as per requirement
+        logger.debug("Starting AI medical question classification");
+        logger.debug("Input - Title: '{}'", title);
+        logger.debug("Input - Content: '{}'", content != null ? content.substring(0, Math.min(100, content.length())) + "..." : "null");
+        
+        try {
+            // Combine title and content for classification
+            String fullText = title + " " + content;
+            logger.debug("Combined text length: {} characters", fullText.length());
+            
+            // Use the AI model to classify the text
+            logger.info("Calling AI model for text classification...");
+            String classification = textClassificationService.predict(fullText);
+            logger.info("AI model returned classification: '{}'", classification);
+            
+            // Assuming the model returns "MEDICAL" or "NON_MEDICAL" (adjust based on your model's output)
+            // You may need to adjust this logic based on what your model actually returns
+            boolean isMedical = "MEDICAL".equalsIgnoreCase(classification) || 
+                               "1".equals(classification) || 
+                               classification.toLowerCase().contains("medical");
+            
+            logger.info("Final classification result: {} (isMedical: {})", classification, isMedical);
+            return isMedical;
+                   
+        } catch (Exception e) {
+            // If AI model fails, default to treating as medical for safety
+            // This ensures medical questions don't get misclassified as non-medical
+            logger.error("Error in AI classification, defaulting to medical for safety. Error: {}", e.getMessage(), e);
+            return true;
+        }
     }
 }
