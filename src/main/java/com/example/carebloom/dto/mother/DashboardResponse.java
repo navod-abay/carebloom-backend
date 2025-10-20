@@ -46,7 +46,9 @@ public class DashboardResponse {
         private String title;
         private String description;
         private String date;
-        private String location;
+        private String time;
+        private String venue;
+        private String location; // Keep for backward compatibility
         private Integer capacity;
         private Integer enrolled;
         private String mohOfficeId;

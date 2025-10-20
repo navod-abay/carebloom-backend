@@ -43,4 +43,5 @@ public class Clinic {
     private List<AddedMother> addedMothers = new ArrayList<>();
     private String queueStatus; // open, closed, completed
     private QueueSettings queueSettings;
+    private Integer completedToday = 0; // Counter for completed patients today
 }

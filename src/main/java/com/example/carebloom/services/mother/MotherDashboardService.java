@@ -168,7 +168,9 @@ public class MotherDashboardService {
         workshopDto.setTitle(workshop.getTitle());
         workshopDto.setDescription(workshop.getDescription());
         workshopDto.setDate(workshop.getDate());
-        workshopDto.setLocation(workshop.getVenue()); // venue maps to location
+        workshopDto.setTime(workshop.getTime());
+        workshopDto.setVenue(workshop.getVenue());
+        workshopDto.setLocation(workshop.getVenue()); // Keep for backward compatibility
         workshopDto.setCapacity(workshop.getCapacity());
         workshopDto.setEnrolled(workshop.getEnrolled());
         workshopDto.setMohOfficeId(workshop.getMohOfficeId());

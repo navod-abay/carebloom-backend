@@ -28,6 +28,12 @@ public class Workshop {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
-    // Optional: List of unit IDs to assign this clinic to
+    // List of registered mother IDs assigned to this workshop
+    private List<String> registeredMotherIds = new ArrayList<>();
+    
+    // List of mothers with full details (similar to clinics)
+    private List<AddedMother> addedMothers = new ArrayList<>();
+    
+    // Optional: List of unit IDs to assign this workshop to
     private List<String> unitIds = new ArrayList<>();
 }
