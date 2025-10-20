@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface ChildRepository extends MongoRepository<Child, String> {
     List<Child> findByMotherId(String motherId);
+    List<Child> findByMotherIdIn(List<String> motherIds);
 }

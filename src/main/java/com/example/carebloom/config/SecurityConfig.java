@@ -55,10 +55,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/moh/clinics/*/queue/**").permitAll() // MOH queue endpoints
                         
                         // Content endpoints
-                        .requestMatchers("/api/v1/hints/**").permitAll()
-                        .requestMatchers("/api/v1/hints").permitAll()
-                        .requestMatchers("/api/v1/articles/**").permitAll()
-                        .requestMatchers("/api/v1/articles").permitAll()
                         
                         // Debug endpoints for development
                         .requestMatchers("/api/v1/debug/**").permitAll()
