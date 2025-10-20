@@ -133,4 +133,55 @@ public class VendorCartService {
 
         return orders;
     }
+    
+    /**
+     * Get order statistics for vendor dashboard
+     */
+    public com.example.carebloom.dto.vendor.VendorOrderStatsDto getOrderStats(String vendorId) {
+        List<CartItem> items = cartRepository.findAll();
+        if (items == null || items.isEmpty()) {
+            return new com.example.carebloom.dto.vendor.VendorOrderStatsDto(0L, 0L, 0.0);
+        }
+
+        // Group items by userId + date to count unique orders
+        Map<String, List<CartItem>> grouped = items.stream()
+                .collect(Collectors.groupingBy(ci -> ci.getUserId() + "::" + ci.getAddedAt().toLocalDate().toString()));
+
+        long totalOrders = grouped.size();
+        
+        // Count pending orders (any order with at least one pending item)
+        long pendingOrders = grouped.values().stream()
+                .filter(orderItems -> {
+                    CartItem first = orderItems.get(0);
+                    String status = first.getOrderStatus();
+                    return status == null || "pending".equalsIgnoreCase(status);
+                })
+                .count();
+
+        // Calculate this month's revenue from delivered orders
+        LocalDateTime startOfMonth = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+        
+        double thisMonthRevenue = grouped.values().stream()
+                .filter(orderItems -> {
+                    CartItem first = orderItems.get(0);
+                    // Check if delivered and within this month
+                    boolean isDelivered = "delivered".equalsIgnoreCase(first.getOrderStatus());
+                    boolean isThisMonth = first.getDeliveredAt() != null && 
+                                         first.getDeliveredAt().isAfter(startOfMonth);
+                    return isDelivered && isThisMonth;
+                })
+                .mapToDouble(orderItems -> {
+                    // Sum all item prices in this order
+                    return orderItems.stream()
+                            .mapToDouble(item -> item.getPriceAtAdd() * item.getQuantity())
+                            .sum();
+                })
+                .sum();
+
+        return new com.example.carebloom.dto.vendor.VendorOrderStatsDto(
+            totalOrders,
+            pendingOrders,
+            thisMonthRevenue
+        );
+    }
 }
