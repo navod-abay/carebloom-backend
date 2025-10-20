@@ -173,6 +173,7 @@ public class MidwifeAuthController {
             profileData.put("email", midwife.getEmail());
             profileData.put("phone", midwife.getPhone());
             profileData.put("mohOfficeId", midwife.getOfficeId());
+
             profileData.put("state", midwife.getState());
             profileData.put("units", unitDtos);
             profileData.put("assignedMotherCount",
@@ -183,11 +184,6 @@ public class MidwifeAuthController {
             // Add new profile fields
             profileData.put("address", midwife.getAddress());
             profileData.put("profileImage", midwife.getProfileImage());
-            profileData.put("specialization", midwife.getSpecialization());
-            profileData.put("experience", midwife.getExperience());
-            profileData.put("licenseNumber", midwife.getLicenseNumber());
-            profileData.put("workingHours", midwife.getWorkingHours());
-            profileData.put("bio", midwife.getBio());
 
             logger.info("Profile retrieved successfully for midwife: {}", midwife.getName());
             return ResponseEntity.ok(profileData);
@@ -223,14 +219,6 @@ public class MidwifeAuthController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Midwife not found");
             }
-
-            // Update only editable fields
-            if (updateData.containsKey("name")) {
-                midwife.setName((String) updateData.get("name"));
-            }
-            if (updateData.containsKey("email")) {
-                midwife.setEmail((String) updateData.get("email"));
-            }
             if (updateData.containsKey("phone")) {
                 midwife.setPhone((String) updateData.get("phone"));
             }
@@ -240,35 +228,6 @@ public class MidwifeAuthController {
             if (updateData.containsKey("profileImage")) {
                 midwife.setProfileImage((String) updateData.get("profileImage"));
             }
-            if (updateData.containsKey("specialization")) {
-                midwife.setSpecialization((String) updateData.get("specialization"));
-            }
-            if (updateData.containsKey("experience")) {
-                Object experienceObj = updateData.get("experience");
-                if (experienceObj != null) {
-                    if (experienceObj instanceof Integer) {
-                        midwife.setExperience((Integer) experienceObj);
-                    } else if (experienceObj instanceof String) {
-                        try {
-                            midwife.setExperience(Integer.parseInt((String) experienceObj));
-                        } catch (NumberFormatException e) {
-                            logger.warn("Invalid experience value: {}", experienceObj);
-                        }
-                    } else if (experienceObj instanceof Number) {
-                        midwife.setExperience(((Number) experienceObj).intValue());
-                    }
-                }
-            }
-            if (updateData.containsKey("licenseNumber")) {
-                midwife.setLicenseNumber((String) updateData.get("licenseNumber"));
-            }
-            if (updateData.containsKey("workingHours")) {
-                midwife.setWorkingHours((String) updateData.get("workingHours"));
-            }
-            if (updateData.containsKey("bio")) {
-                midwife.setBio((String) updateData.get("bio"));
-            }
-
             // Save updated midwife
             midwife.setUpdatedAt(LocalDateTime.now());
             Midwife updatedMidwife = midwifeRepository.save(midwife);
@@ -292,11 +251,6 @@ public class MidwifeAuthController {
             profileData.put("phone", updatedMidwife.getPhone());
             profileData.put("address", updatedMidwife.getAddress());
             profileData.put("profileImage", updatedMidwife.getProfileImage());
-            profileData.put("specialization", updatedMidwife.getSpecialization());
-            profileData.put("experience", updatedMidwife.getExperience());
-            profileData.put("licenseNumber", updatedMidwife.getLicenseNumber());
-            profileData.put("workingHours", updatedMidwife.getWorkingHours());
-            profileData.put("bio", updatedMidwife.getBio());
             profileData.put("mohOfficeId", updatedMidwife.getOfficeId());
             profileData.put("state", updatedMidwife.getState());
             profileData.put("units", unitDtos);
