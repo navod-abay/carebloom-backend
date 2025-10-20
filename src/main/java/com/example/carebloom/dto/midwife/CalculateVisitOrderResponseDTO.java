@@ -20,5 +20,7 @@ public class CalculateVisitOrderResponseDTO {
         private Integer estimatedDuration; // minutes
         private Double distance; // meters from previous location
         private Integer travelTimeMinutes; // real travel time from Google Maps
+        private Double latitude; // mother's latitude coordinate
+        private Double longitude; // mother's longitude coordinate
     }
 }

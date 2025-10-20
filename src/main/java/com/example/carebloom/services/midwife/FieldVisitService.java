@@ -190,7 +190,7 @@ public class FieldVisitService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: Field visit does not belong to current midwife");
         }
 
-        // Build response DTO
+        // Build response DTO with enhanced schedule information
         FieldVisitResponseDTO dto = new FieldVisitResponseDTO();
         dto.setId(fieldVisit.getId());
         dto.setDate(fieldVisit.getDate());
@@ -198,6 +198,13 @@ public class FieldVisitService {
         dto.setEndTime(fieldVisit.getEndTime());
         dto.setMidwifeId(fieldVisit.getMidwifeId());
         dto.setStatus(fieldVisit.getStatus());
+        dto.setCreatedAt(fieldVisit.getCreatedAt());
+        dto.setUpdatedAt(fieldVisit.getUpdatedAt());
+
+        // Convert enhanced schedule information if available
+        if (fieldVisit.getSchedule() != null) {
+            dto.setSchedule(convertToRouteScheduleInfo(fieldVisit.getSchedule()));
+        }
 
         // Get detailed mother information including appointment details
         List<FieldVisitResponseDTO.MotherBasicInfo> mothers = new ArrayList<>();
@@ -372,26 +379,26 @@ public class FieldVisitService {
                                m.getName(), m.getLatitude(), m.getLongitude()));
         }
 
-        logger.info("--- STEP 3: Calling route optimization service ---");
-        // Use RouteOptimizationService for optimal routing
+        logger.info("--- STEP 3: Calling enhanced route optimization service ---");
+        // Use RouteOptimizationService for optimal routing with metrics
         try {
             LocalTime startTime = LocalTime.parse(fieldVisit.getStartTime());
             LocalTime endTime = LocalTime.parse(fieldVisit.getEndTime());
             logger.info("Optimization time window: {} - {}", startTime, endTime);
             
-            List<Mother> optimizedOrder = routeOptimizationService.optimizeVisitOrder(
+            RouteOptimizationService.OptimizationResult result = routeOptimizationService.optimizeVisitOrderWithMetrics(
                 mothersWithLocation, startTime, endTime);
             
             logger.info("--- STEP 4: Converting to response format ---");
             List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder = 
-                convertToVisitOrderResponse(optimizedOrder, fieldVisit);
+                convertToVisitOrderResponse(result.getOptimizedOrder(), fieldVisit);
             
-            logger.info("--- STEP 5: Creating success response ---");
-            CalculateVisitOrderResponseDTO response = createSuccessResponse(visitOrder, fieldVisit);
+            logger.info("--- STEP 5: Creating success response with enhanced persistence ---");
+            CalculateVisitOrderResponseDTO response = createSuccessResponseWithMetrics(visitOrder, fieldVisit, result);
             
             logger.info("=== CALCULATE VISIT ORDER COMPLETED SUCCESSFULLY ===");
-            logger.info("Final visit order: {} mothers, total distance: {}m, total time: {}min", 
-                       response.getVisitOrder().size(), response.getTotalDistance(), response.getTotalEstimatedTime());
+            logger.info("Final visit order: {} mothers, total distance: {}m, total time: {}min, algorithm fallback: {}", 
+                       response.getVisitOrder().size(), response.getTotalDistance(), response.getTotalEstimatedTime(), result.isFellbackToSimple());
             
             return response;
             
@@ -509,6 +516,8 @@ public class FieldVisitService {
             order.setEstimatedArrivalTime(currentTime);
             order.setEstimatedDuration(30); // Default 30 minutes per visit
             order.setDistance(i == 0 ? 0.0 : 1000.0 * (i)); // 1km between visits as placeholder
+            order.setLatitude(mother.getLatitude());
+            order.setLongitude(mother.getLongitude());
             
             visitOrder.add(order);
             currentTime = addMinutesToTime(currentTime, 30);
@@ -587,14 +596,84 @@ public class FieldVisitService {
     }
 
     /**
-     * Persist the calculated visit order to database
+     * Create success response with enhanced metrics and persistence
+     */
+    private CalculateVisitOrderResponseDTO createSuccessResponseWithMetrics(List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder, 
+                                                                           FieldVisit fieldVisit, 
+                                                                           RouteOptimizationService.OptimizationResult optimizationResult) {
+        // Calculate totals
+        double totalDistance = visitOrder.stream()
+            .mapToDouble(order -> order.getDistance() != null ? order.getDistance() : 0.0)
+            .sum();
+        
+        int totalTime = visitOrder.stream()
+            .mapToInt(order -> order.getEstimatedDuration() != null ? order.getEstimatedDuration() : 30)
+            .sum();
+
+        // Create enhanced schedule and persist to database
+        FieldVisit.RouteSchedule schedule = createRouteSchedule(visitOrder, fieldVisit);
+        
+        // Update metadata with optimization result
+        schedule.getMetadata().setFellbackToSimple(optimizationResult.isFellbackToSimple());
+        
+        // Persist the calculated order with enhanced schedule
+        persistVisitOrderWithSchedule(visitOrder, fieldVisit, schedule);
+
+        CalculateVisitOrderResponseDTO response = new CalculateVisitOrderResponseDTO();
+        response.setSuccess(true);
+        response.setMessage("Visit order calculated successfully using " + 
+                           (optimizationResult.isFellbackToSimple() ? "simple algorithm" : "route optimization"));
+        response.setVisitOrder(visitOrder);
+        response.setTotalDistance(totalDistance);
+        response.setTotalEstimatedTime(totalTime);
+
+        logger.info("Enhanced visit order calculated and persisted successfully: {} mothers, total distance: {}m, total time: {}min, fallback: {}", 
+                   visitOrder.size(), totalDistance, totalTime, optimizationResult.isFellbackToSimple());
+        return response;
+    }
+
+    /**
+     * Persist visit order with pre-created schedule object
+     */
+    private void persistVisitOrderWithSchedule(List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder, 
+                                              FieldVisit fieldVisit, 
+                                              FieldVisit.RouteSchedule schedule) {
+        logger.info("=== PERSISTING ENHANCED VISIT ORDER WITH SCHEDULE TO DATABASE ===");
+        
+        try {
+            // Update FieldVisit with schedule and reorder selectedMotherIds
+            List<String> orderedMotherIds = visitOrder.stream()
+                .map(CalculateVisitOrderResponseDTO.VisitOrder::getMotherId)
+                .collect(Collectors.toList());
+            
+            fieldVisit.setSelectedMotherIds(orderedMotherIds);
+            fieldVisit.setSchedule(schedule);
+            fieldVisit.setStatus("CALCULATED");
+            fieldVisit.setUpdatedAt(LocalDateTime.now());
+            fieldVisitRepository.save(fieldVisit);
+            
+            // Update mother appointments with scheduled times
+            updateMotherScheduledTimes(visitOrder, fieldVisit);
+            
+            logger.info("Enhanced visit order persistence completed successfully");
+            
+        } catch (Exception e) {
+            logger.error("ERROR persisting enhanced visit order: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Persist the calculated visit order to database with enhanced schedule data
      */
     private void persistVisitOrder(List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder, FieldVisit fieldVisit) {
-        logger.info("=== PERSISTING VISIT ORDER TO DATABASE ===");
+        logger.info("=== PERSISTING ENHANCED VISIT ORDER TO DATABASE ===");
         logger.info("Persisting visit order for {} mothers in field visit {}", visitOrder.size(), fieldVisit.getId());
         
         try {
-            // 1. Update FieldVisit status to CALCULATED and reorder selectedMotherIds
+            // 1. Create enhanced RouteSchedule object
+            FieldVisit.RouteSchedule schedule = createRouteSchedule(visitOrder, fieldVisit);
+            
+            // 2. Update FieldVisit with schedule and reorder selectedMotherIds
             List<String> orderedMotherIds = visitOrder.stream()
                 .map(CalculateVisitOrderResponseDTO.VisitOrder::getMotherId)
                 .collect(Collectors.toList());
@@ -604,68 +683,138 @@ public class FieldVisitService {
             logger.info("Optimized order: {}", orderedMotherIds);
             
             fieldVisit.setSelectedMotherIds(orderedMotherIds);
+            fieldVisit.setSchedule(schedule);
             fieldVisit.setStatus("CALCULATED");
             fieldVisit.setUpdatedAt(LocalDateTime.now());
             fieldVisitRepository.save(fieldVisit);
             
-            logger.info("Updated FieldVisit {} status to CALCULATED with ordered mothers", fieldVisit.getId());
+            logger.info("Updated FieldVisit {} with enhanced schedule data", fieldVisit.getId());
 
-            // 2. Update each Mother's FieldVisitAppointment status to "ordered"
-            logger.info("Updating individual mother appointments to 'ordered' status");
-            int updatedCount = 0;
-            int errorCount = 0;
+            // 3. Update each Mother's FieldVisitAppointment with scheduled times (preserve originals)
+            updateMotherScheduledTimes(visitOrder, fieldVisit);
             
-            for (int i = 0; i < visitOrder.size(); i++) {
-                CalculateVisitOrderResponseDTO.VisitOrder order = visitOrder.get(i);
-                logger.debug("Processing mother {} ({}) - position {} in route", 
-                            order.getMotherId(), order.getMotherName(), i + 1);
-                
-                Mother mother = motherRepository.findById(order.getMotherId()).orElse(null);
-                
-                if (mother != null && mother.getFieldVisitAppointment() != null && 
-                    fieldVisit.getId().equals(mother.getFieldVisitAppointment().getVisitId())) {
-                    
-                    // Update appointment with calculated times and ordered status
-                    Mother.FieldVisitAppointment appointment = mother.getFieldVisitAppointment();
-                    String oldStatus = appointment.getStatus();
-                    String oldStartTime = appointment.getStartTime();
-                    String oldEndTime = appointment.getEndTime();
-                    
-                    appointment.setStatus("ordered");
-                    appointment.setStartTime(order.getEstimatedArrivalTime());
-                    
-                    // Calculate end time based on estimated duration
-                    String endTime = addMinutesToTime(order.getEstimatedArrivalTime(), 
-                                                     order.getEstimatedDuration());
-                    appointment.setEndTime(endTime);
-                    
-                    motherRepository.save(mother);
-                    updatedCount++;
-                    
-                    logger.info("Updated Mother {} appointment:", mother.getName());
-                    logger.info("  Status: {} -> {}", oldStatus, appointment.getStatus());
-                    logger.info("  Time: {} - {} -> {} - {}", 
-                               oldStartTime, oldEndTime, appointment.getStartTime(), appointment.getEndTime());
-                    logger.info("  Position in route: {}", i + 1);
-                } else {
-                    errorCount++;
-                    logger.error("Failed to update Mother {}: mother={}, appointment={}, visitId match={}", 
-                                order.getMotherId(), 
-                                mother != null ? "found" : "not found",
-                                mother != null && mother.getFieldVisitAppointment() != null ? "exists" : "missing",
-                                mother != null && mother.getFieldVisitAppointment() != null ? 
-                                    fieldVisit.getId().equals(mother.getFieldVisitAppointment().getVisitId()) : "N/A");
-                }
-            }
-            
-            logger.info("Appointment updates completed: {} successful, {} errors", updatedCount, errorCount);
-            logger.info("=== VISIT ORDER PERSISTENCE COMPLETED SUCCESSFULLY ===");
+            logger.info("=== ENHANCED VISIT ORDER PERSISTENCE COMPLETED SUCCESSFULLY ===");
             
         } catch (Exception e) {
-            logger.error("ERROR persisting visit order for FieldVisit {}: {}", fieldVisit.getId(), e.getMessage(), e);
+            logger.error("ERROR persisting enhanced visit order for FieldVisit {}: {}", fieldVisit.getId(), e.getMessage(), e);
             logger.error("Persistence failed, but calculated order will still be returned to user");
-            // Don't throw exception - we still want to return the calculated order even if persistence fails
         }
+    }
+
+    /**
+     * Create enhanced RouteSchedule object with comprehensive data
+     */
+    private FieldVisit.RouteSchedule createRouteSchedule(List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder, FieldVisit fieldVisit) {
+        List<FieldVisit.RouteSchedule.ScheduledVisit> scheduledVisits = new ArrayList<>();
+        double totalDistance = 0;
+        int totalTravelTime = 0;
+        int totalServiceTime = 0;
+        
+        for (int i = 0; i < visitOrder.size(); i++) {
+            CalculateVisitOrderResponseDTO.VisitOrder order = visitOrder.get(i);
+            Mother mother = motherRepository.findById(order.getMotherId()).orElse(null);
+            
+            FieldVisit.RouteSchedule.ScheduledVisit scheduledVisit = new FieldVisit.RouteSchedule.ScheduledVisit();
+            scheduledVisit.setMotherId(order.getMotherId());
+            scheduledVisit.setMotherName(order.getMotherName());
+            scheduledVisit.setVisitOrder(i + 1);
+            scheduledVisit.setScheduledStartTime(order.getEstimatedArrivalTime());
+            scheduledVisit.setScheduledEndTime(addMinutesToTime(order.getEstimatedArrivalTime(), order.getEstimatedDuration()));
+            scheduledVisit.setEstimatedDuration(order.getEstimatedDuration());
+            scheduledVisit.setDistanceFromPrevious(order.getDistance());
+            scheduledVisit.setTravelTimeFromPrevious(order.getTravelTimeMinutes());
+            
+            // Preserve original times from mother's appointment
+            if (mother != null && mother.getFieldVisitAppointment() != null) {
+                scheduledVisit.setOriginalStartTime(mother.getFieldVisitAppointment().getStartTime());
+                scheduledVisit.setOriginalEndTime(mother.getFieldVisitAppointment().getEndTime());
+            }
+            
+            // Set coordinates
+            FieldVisit.RouteSchedule.ScheduledVisit.RouteCoordinates coords = new FieldVisit.RouteSchedule.ScheduledVisit.RouteCoordinates();
+            if (mother != null) {
+                coords.setLatitude(mother.getLatitude());
+                coords.setLongitude(mother.getLongitude());
+                coords.setAddress(mother.getLocationAddress() != null ? mother.getLocationAddress() : mother.getAddress());
+            }
+            scheduledVisit.setCoordinates(coords);
+            
+            scheduledVisits.add(scheduledVisit);
+            
+            // Accumulate metrics
+            if (order.getDistance() != null) totalDistance += order.getDistance();
+            if (order.getTravelTimeMinutes() != null) totalTravelTime += order.getTravelTimeMinutes();
+            if (order.getEstimatedDuration() != null) totalServiceTime += order.getEstimatedDuration();
+        }
+        
+        // Create metadata (simplified per requirements)
+        FieldVisit.RouteSchedule.ScheduleMetadata metadata = new FieldVisit.RouteSchedule.ScheduleMetadata();
+        metadata.setTotalDistance(totalDistance);
+        metadata.setTotalTravelTime(totalTravelTime);
+        metadata.setTotalServiceTime(totalServiceTime);
+        metadata.setFellbackToSimple(false); // Will be set by calling method
+        
+        // Create schedule
+        FieldVisit.RouteSchedule schedule = new FieldVisit.RouteSchedule();
+        schedule.setScheduledVisits(scheduledVisits);
+        schedule.setMetadata(metadata);
+        schedule.setCalculatedAt(LocalDateTime.now());
+        
+        return schedule;
+    }
+
+    /**
+     * Update Mother appointments with scheduled times (preserve originals)
+     */
+    private void updateMotherScheduledTimes(List<CalculateVisitOrderResponseDTO.VisitOrder> visitOrder, FieldVisit fieldVisit) {
+        logger.info("Updating individual mother appointments with scheduled times");
+        int updatedCount = 0;
+        int errorCount = 0;
+        
+        for (int i = 0; i < visitOrder.size(); i++) {
+            CalculateVisitOrderResponseDTO.VisitOrder order = visitOrder.get(i);
+            logger.debug("Processing mother {} ({}) - position {} in route", 
+                        order.getMotherId(), order.getMotherName(), i + 1);
+            
+            Mother mother = motherRepository.findById(order.getMotherId()).orElse(null);
+            
+            if (mother != null && mother.getFieldVisitAppointment() != null && 
+                fieldVisit.getId().equals(mother.getFieldVisitAppointment().getVisitId())) {
+                
+                Mother.FieldVisitAppointment appointment = mother.getFieldVisitAppointment();
+                String oldStatus = appointment.getStatus();
+                String oldScheduledStart = appointment.getScheduledStartTime();
+                String oldScheduledEnd = appointment.getScheduledEndTime();
+                
+                // Set scheduled times (calculated by optimization) - PRESERVE ORIGINAL TIMES
+                appointment.setScheduledStartTime(order.getEstimatedArrivalTime());
+                appointment.setScheduledEndTime(addMinutesToTime(order.getEstimatedArrivalTime(), order.getEstimatedDuration()));
+                appointment.setStatus("ordered");
+                
+                // Original startTime and endTime remain unchanged!
+                
+                motherRepository.save(mother);
+                updatedCount++;
+                
+                logger.info("Updated Mother {} appointment:", mother.getName());
+                logger.info("  Status: {} -> {}", oldStatus, appointment.getStatus());
+                logger.info("  Original times preserved: {} - {}", appointment.getStartTime(), appointment.getEndTime());
+                logger.info("  Scheduled times: {} -> {} | {} -> {}", 
+                           oldScheduledStart, appointment.getScheduledStartTime(),
+                           oldScheduledEnd, appointment.getScheduledEndTime());
+                logger.info("  Position in route: {}", i + 1);
+            } else {
+                errorCount++;
+                logger.error("Failed to update Mother {}: mother={}, appointment={}, visitId match={}", 
+                            order.getMotherId(), 
+                            mother != null ? "found" : "not found",
+                            mother != null && mother.getFieldVisitAppointment() != null ? "exists" : "missing",
+                            mother != null && mother.getFieldVisitAppointment() != null ? 
+                                fieldVisit.getId().equals(mother.getFieldVisitAppointment().getVisitId()) : "N/A");
+            }
+        }
+        
+        logger.info("Scheduled time updates completed: {} successful, {} errors", updatedCount, errorCount);
     }
 
     /**
@@ -686,6 +835,8 @@ public class FieldVisitService {
             order.setAddress(mother.getLocationAddress() != null ? mother.getLocationAddress() : mother.getAddress());
             order.setEstimatedArrivalTime(currentTime);
             order.setEstimatedDuration(30); // Default 30 minutes per visit
+            order.setLatitude(mother.getLatitude());
+            order.setLongitude(mother.getLongitude());
             
             // Calculate real travel time and distance from previous location
             if (i == 0) {
@@ -774,5 +925,66 @@ public class FieldVisitService {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         
         return EARTH_RADIUS * c;
+    }
+
+    /**
+     * Convert RouteSchedule to RouteScheduleInfo DTO
+     */
+    private FieldVisitResponseDTO.RouteScheduleInfo convertToRouteScheduleInfo(FieldVisit.RouteSchedule schedule) {
+        FieldVisitResponseDTO.RouteScheduleInfo info = new FieldVisitResponseDTO.RouteScheduleInfo();
+        info.setCalculatedAt(schedule.getCalculatedAt());
+
+        // Convert scheduled visits
+        if (schedule.getScheduledVisits() != null) {
+            info.setScheduledVisits(schedule.getScheduledVisits().stream()
+                .map(this::convertToScheduledVisitInfo)
+                .collect(Collectors.toList()));
+        }
+
+        // Convert metadata
+        if (schedule.getMetadata() != null) {
+            FieldVisitResponseDTO.RouteScheduleInfo.ScheduleMetadata metadata = 
+                new FieldVisitResponseDTO.RouteScheduleInfo.ScheduleMetadata();
+            metadata.setTotalDistance(schedule.getMetadata().getTotalDistance());
+            metadata.setTotalTravelTime(schedule.getMetadata().getTotalTravelTime());
+            metadata.setTotalServiceTime(schedule.getMetadata().getTotalServiceTime());
+            metadata.setFellbackToSimple(schedule.getMetadata().getFellbackToSimple());
+            info.setMetadata(metadata);
+        }
+
+        return info;
+    }
+
+    /**
+     * Convert ScheduledVisit to ScheduledVisitInfo DTO
+     */
+    private FieldVisitResponseDTO.RouteScheduleInfo.ScheduledVisitInfo convertToScheduledVisitInfo(
+            FieldVisit.RouteSchedule.ScheduledVisit visit) {
+        
+        FieldVisitResponseDTO.RouteScheduleInfo.ScheduledVisitInfo info = 
+            new FieldVisitResponseDTO.RouteScheduleInfo.ScheduledVisitInfo();
+        
+        info.setMotherId(visit.getMotherId());
+        info.setMotherName(visit.getMotherName());
+        info.setVisitOrder(visit.getVisitOrder());
+        info.setScheduledStartTime(visit.getScheduledStartTime());
+        info.setScheduledEndTime(visit.getScheduledEndTime());
+        info.setOriginalStartTime(visit.getOriginalStartTime());
+        info.setOriginalEndTime(visit.getOriginalEndTime());
+        info.setEstimatedDuration(visit.getEstimatedDuration());
+        info.setDistanceFromPrevious(visit.getDistanceFromPrevious());
+        info.setTravelTimeFromPrevious(visit.getTravelTimeFromPrevious());
+
+        // Convert coordinates
+        if (visit.getCoordinates() != null) {
+            FieldVisitResponseDTO.RouteScheduleInfo.ScheduledVisitInfo.LocationInfo coords = 
+                new FieldVisitResponseDTO.RouteScheduleInfo.ScheduledVisitInfo.LocationInfo();
+            coords.setLatitude(visit.getCoordinates().getLatitude());
+            coords.setLongitude(visit.getCoordinates().getLongitude());
+            coords.setAddress(visit.getCoordinates().getAddress());
+            info.setCoordinates(coords);
+        }
+
+        return info;
     }
 }

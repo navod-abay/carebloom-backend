@@ -1,5 +1,6 @@
 package com.example.carebloom.controllers.moh;
 
+import com.example.carebloom.dto.CreateWorkshopRequest;
 import com.example.carebloom.dto.CreateWorkshopResponse;
 import com.example.carebloom.models.Workshop;
 import com.example.carebloom.services.moh.MoHWorkshopService;
@@ -23,10 +24,10 @@ public class MoHWorkshopController {
      * Create a new workshop
      */
     @PostMapping("/workshops")
-    public ResponseEntity<?> createWorkshop(@RequestBody Workshop workshop, Authentication authentication) {
+    public ResponseEntity<?> createWorkshop(@RequestBody CreateWorkshopRequest request, Authentication authentication) {
         try {
             String userEmail = authentication.getName();
-            CreateWorkshopResponse response = workshopService.createWorkshop(workshop, userEmail);
+            CreateWorkshopResponse response = workshopService.createWorkshop(request, userEmail);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: " + e.getMessage());
@@ -216,6 +217,56 @@ public class MoHWorkshopController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("An error occurred while retrieving upcoming workshops");
+        }
+    }
+
+    /**
+     * Add mothers to a workshop
+     */
+    @PostMapping("/workshops/{id}/mothers")
+    public ResponseEntity<?> addMothersToWorkshop(
+            @PathVariable String id,
+            @RequestBody List<String> motherIds,
+            Authentication authentication) {
+        try {
+            String userEmail = authentication.getName();
+            Workshop updatedWorkshop = workshopService.addMothersToWorkshop(id, motherIds, userEmail);
+            
+            if (updatedWorkshop != null) {
+                return ResponseEntity.ok(updatedWorkshop);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Workshop not found or access denied");
+            }
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An error occurred while adding mothers to workshop");
+        }
+    }
+
+    /**
+     * Remove a mother from a workshop
+     */
+    @DeleteMapping("/workshops/{id}/mothers/{motherId}")
+    public ResponseEntity<?> removeMotherFromWorkshop(
+            @PathVariable String id,
+            @PathVariable String motherId,
+            Authentication authentication) {
+        try {
+            String userEmail = authentication.getName();
+            Workshop updatedWorkshop = workshopService.removeMotherFromWorkshop(id, motherId, userEmail);
+            
+            if (updatedWorkshop != null) {
+                return ResponseEntity.ok(updatedWorkshop);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Workshop not found or access denied");
+            }
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An error occurred while removing mother from workshop");
         }
     }
 }
