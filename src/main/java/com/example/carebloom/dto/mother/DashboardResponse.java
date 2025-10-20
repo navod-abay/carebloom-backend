@@ -1,6 +1,7 @@
 package com.example.carebloom.dto.mother;
 
 import com.example.carebloom.dto.MOHOfficeDto;
+import com.example.carebloom.dto.clinics.ClinicAppointmentDto;
 import com.example.carebloom.dto.midwife.MidwifeBasicDTO;
 import lombok.Data;
 
@@ -11,6 +12,7 @@ public class DashboardResponse {
     private MotherProfile MotherProfile;
     private List<HealthTip> healthTips;
     private List<Workshop> workshops;
+    private List<ClinicAppointmentDto> clinics;
 
     @Data
     public static class MotherProfile {

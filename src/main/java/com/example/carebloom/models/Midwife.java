@@ -35,6 +35,28 @@ public class Midwife {
     @Field("state")
     private String state = "pending";
 
+    // Profile fields
+    @Field("address")
+    private String address;
+
+    @Field("profile_image")
+    private String profileImage;
+
+    @Field("specialization")
+    private String specialization;
+
+    @Field("experience")
+    private Integer experience; // Years of experience
+
+    @Field("license_number")
+    private String licenseNumber;
+
+    @Field("working_hours")
+    private String workingHours;
+
+    @Field("bio")
+    private String bio;
+
     @CreatedDate
     @Field("created_at")
     private LocalDateTime createdAt;

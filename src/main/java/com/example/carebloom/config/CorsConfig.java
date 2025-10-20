@@ -36,6 +36,7 @@ public class CorsConfig {
 
         // Vendor endpoints
         registerCorsConfig(source, "/api/v1/vendor/**", corsProperties.getVendorOrigin());
+        registerCorsConfig(source, "/api/v1/vendors/**", corsProperties.getVendorOrigin());
 
         // MOH Office endpoints
         registerCorsConfig(source, "/api/v1/moh/**", corsProperties.getMohOrigin());

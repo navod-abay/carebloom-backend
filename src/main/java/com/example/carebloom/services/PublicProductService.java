@@ -1,5 +1,7 @@
 package com.example.carebloom.services;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,6 +22,7 @@ import com.example.carebloom.repositories.VendorRepository;
 public class PublicProductService {
 
     private static final Logger logger = LoggerFactory.getLogger(PublicProductService.class);
+    private static final Duration CACHE_DURATION = Duration.ofMinutes(5);
 
     @Autowired
     private ProductRepository productRepository;
@@ -27,17 +30,45 @@ public class PublicProductService {
     @Autowired
     private VendorRepository vendorRepository;
 
+    // Simple in-memory cache for approved vendor IDs
+    private List<String> cachedApprovedVendorIds = null;
+    private LocalDateTime cacheTimestamp = null;
+
+    /**
+     * Get approved vendor IDs with caching
+     */
+    private List<String> getApprovedVendorIds() {
+        LocalDateTime now = LocalDateTime.now();
+        
+        // Check if cache is valid
+        if (cachedApprovedVendorIds != null && cacheTimestamp != null) {
+            Duration timeSinceCache = Duration.between(cacheTimestamp, now);
+            if (timeSinceCache.compareTo(CACHE_DURATION) < 0) {
+                logger.debug("Using cached approved vendor IDs ({} vendors)", cachedApprovedVendorIds.size());
+                return cachedApprovedVendorIds;
+            }
+        }
+        
+        // Refresh cache
+        logger.info("Refreshing approved vendor cache");
+        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
+        cachedApprovedVendorIds = approvedVendors.stream()
+                .map(Vendor::getId)
+                .collect(Collectors.toList());
+        cacheTimestamp = now;
+        
+        logger.info("Cached {} approved vendors", cachedApprovedVendorIds.size());
+        return cachedApprovedVendorIds;
+    }
+
     /**
      * Get all active products from approved vendors
      */
     public List<ProductResponse> getAllActiveProducts() {
         logger.info("Fetching all active products from approved vendors");
 
-        // Get all approved vendors
-        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
-        List<String> approvedVendorIds = approvedVendors.stream()
-                .map(Vendor::getId)
-                .collect(Collectors.toList());
+        // Get approved vendor IDs (from cache if available)
+        List<String> approvedVendorIds = getApprovedVendorIds();
 
         // Get all active products from approved vendors
         List<Product> products = productRepository.findActiveProductsByVendorIds(approvedVendorIds);
@@ -47,7 +78,7 @@ public class PublicProductService {
                 .collect(Collectors.toList());
 
         logger.info("Found {} active products from {} approved vendors", 
-                   productResponses.size(), approvedVendors.size());
+                   productResponses.size(), approvedVendorIds.size());
         return productResponses;
     }
 
@@ -57,11 +88,8 @@ public class PublicProductService {
     public List<ProductResponse> getActiveProductsByCategory(String category) {
         logger.info("Fetching active products by category: {}", category);
 
-        // Get all approved vendors
-        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
-        List<String> approvedVendorIds = approvedVendors.stream()
-                .map(Vendor::getId)
-                .collect(Collectors.toList());
+        // Get approved vendor IDs (from cache if available)
+        List<String> approvedVendorIds = getApprovedVendorIds();
 
         // Get products by category from approved vendors
         List<Product> products = productRepository.findActiveProductsByVendorIdsAndCategory(approvedVendorIds, category);
@@ -80,11 +108,7 @@ public class PublicProductService {
     public List<ProductResponse> getActiveProductsBySectionId(Integer sectionId) {
         logger.info("Fetching active products by sectionId: {}", sectionId);
 
-        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
-        List<String> approvedVendorIds = approvedVendors.stream()
-                .map(Vendor::getId)
-                .collect(Collectors.toList());
-
+        List<String> approvedVendorIds = getApprovedVendorIds();
         List<Product> products = productRepository.findActiveProductsByVendorIdsAndSectionId(approvedVendorIds, sectionId);
 
         return products.stream().map(this::mapToResponse).collect(Collectors.toList());
@@ -96,11 +120,7 @@ public class PublicProductService {
     public List<ProductResponse> getActiveProductsBySectionIdAndName(Integer sectionId, String searchTerm) {
         logger.info("Searching active products by sectionId: {} and name: {}", sectionId, searchTerm);
 
-        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
-        List<String> approvedVendorIds = approvedVendors.stream()
-                .map(Vendor::getId)
-                .collect(Collectors.toList());
-
+        List<String> approvedVendorIds = getApprovedVendorIds();
         List<Product> products = productRepository.findActiveProductsByVendorIdsAndSectionIdAndNameContaining(approvedVendorIds, sectionId, searchTerm);
 
         return products.stream().map(this::mapToResponse).collect(Collectors.toList());
@@ -112,11 +132,7 @@ public class PublicProductService {
     public List<ProductResponse> getActiveProductsByCategorySectionAndName(String category, Integer sectionId, String searchTerm) {
         logger.info("Searching active products by category: {}, sectionId: {}, name: {}", category, sectionId, searchTerm);
 
-        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
-        List<String> approvedVendorIds = approvedVendors.stream()
-                .map(Vendor::getId)
-                .collect(Collectors.toList());
-
+        List<String> approvedVendorIds = getApprovedVendorIds();
         List<Product> products = productRepository.findActiveProductsByVendorIdsAndCategoryAndSectionIdAndNameContaining(approvedVendorIds, category, sectionId, searchTerm);
 
         return products.stream().map(this::mapToResponse).collect(Collectors.toList());
@@ -128,11 +144,8 @@ public class PublicProductService {
     public List<ProductResponse> getActiveProductsByName(String searchTerm) {
         logger.info("Searching active products by name: {}", searchTerm);
 
-        // Get all approved vendors
-        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
-        List<String> approvedVendorIds = approvedVendors.stream()
-                .map(Vendor::getId)
-                .collect(Collectors.toList());
+        // Get approved vendor IDs (from cache if available)
+        List<String> approvedVendorIds = getApprovedVendorIds();
 
         // Search products by name from approved vendors
         List<Product> products = productRepository.findActiveProductsByVendorIdsAndNameContaining(approvedVendorIds, searchTerm);
@@ -151,11 +164,8 @@ public class PublicProductService {
     public List<ProductResponse> getActiveProductsByNameAndCategory(String searchTerm, String category) {
         logger.info("Searching active products by name: {} and category: {}", searchTerm, category);
 
-        // Get all approved vendors
-        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
-        List<String> approvedVendorIds = approvedVendors.stream()
-                .map(Vendor::getId)
-                .collect(Collectors.toList());
+        // Get approved vendor IDs (from cache if available)
+        List<String> approvedVendorIds = getApprovedVendorIds();
 
         // Search products by name and category from approved vendors
         List<Product> products = productRepository.findActiveProductsByVendorIdsAndCategoryAndNameContaining(
@@ -227,11 +237,8 @@ public class PublicProductService {
     public List<String> getAvailableCategories() {
         logger.info("Fetching available categories from active products");
 
-        // Get all approved vendors
-        List<Vendor> approvedVendors = vendorRepository.findByState("approved");
-        List<String> approvedVendorIds = approvedVendors.stream()
-                .map(Vendor::getId)
-                .collect(Collectors.toList());
+        // Get approved vendor IDs (from cache if available)
+        List<String> approvedVendorIds = getApprovedVendorIds();
 
         // Get distinct categories from active products of approved vendors
         List<String> categories = productRepository.findDistinctCategoriesByVendorIds(approvedVendorIds);

@@ -44,6 +44,8 @@ public class VitalRecord {
 
     private double heartRate;
 
+    private String notes;  // Added field for visit notes
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

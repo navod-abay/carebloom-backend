@@ -17,8 +17,8 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/cart")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/v1/mothers/cart")
+@CrossOrigin(origins = "$(app.cors.mother-origin)")
 public class CartController {
 
     private static final Logger logger = LoggerFactory.getLogger(CartController.class);
