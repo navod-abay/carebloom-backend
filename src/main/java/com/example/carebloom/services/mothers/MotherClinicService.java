@@ -166,16 +166,25 @@ public class MotherClinicService {
         // Check queue status
         boolean queueActive = "open".equals(clinic.getQueueStatus());
         dto.setQueueActive(queueActive);
+        logger.info("Clinic {} - Queue Active: {}, Queue Status: {}", clinic.getTitle(), queueActive, clinic.getQueueStatus());
 
         if (queueActive) {
+            // Always set the current queue number (who's being served)
+            Integer currentQueueNumber = getCurrentQueueNumber(clinic.getId());
+            dto.setCurrentQueueNumber(currentQueueNumber);
+            logger.info("Clinic {} - Current Queue Number: {}", clinic.getTitle(), currentQueueNumber);
+            
             // Find mother's queue position
             Optional<QueueUser> motherInQueue = queueUserRepository.findByMotherIdAndClinicId(motherId, clinic.getId());
             
             if (motherInQueue.isPresent()) {
                 QueueUser queueUser = motherInQueue.get();
                 dto.setQueueNumber(queueUser.getPosition());
-                dto.setCurrentQueueNumber(getCurrentQueueNumber(clinic.getId()));
                 dto.setEstimatedWaitTime(queueUser.getWaitTime() + " min");
+                logger.info("Clinic {} - Mother in queue at position: {}, wait time: {} min", 
+                    clinic.getTitle(), queueUser.getPosition(), queueUser.getWaitTime());
+            } else {
+                logger.info("Clinic {} - Mother not in queue", clinic.getTitle());
             }
         }
 
