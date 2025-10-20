@@ -39,6 +39,44 @@ public class RouteOptimizationService {
     }
 
     /**
+     * Optimizes the visit order with metrics tracking
+     */
+    public OptimizationResult optimizeVisitOrderWithMetrics(List<Mother> mothers, LocalTime startTime, LocalTime endTime) {
+        long startMs = System.currentTimeMillis();
+        boolean fellbackToSimple = false;
+        
+        try {
+            List<Mother> optimized = optimizeVisitOrder(mothers, startTime, endTime);
+            long endMs = System.currentTimeMillis();
+            
+            return new OptimizationResult(optimized, fellbackToSimple, endMs - startMs);
+            
+        } catch (Exception e) {
+            log.warn("OR-Tools failed, falling back to simple algorithm");
+            List<Mother> fallback = fallbackSimpleOrdering(mothers);
+            long endMs = System.currentTimeMillis();
+            
+            return new OptimizationResult(fallback, true, endMs - startMs);
+        }
+    }
+
+    /**
+     * Result object containing optimization results and metadata
+     */
+    @lombok.Data
+    public static class OptimizationResult {
+        private List<Mother> optimizedOrder;
+        private boolean fellbackToSimple;
+        private long optimizationTimeMs;
+        
+        public OptimizationResult(List<Mother> optimizedOrder, boolean fellbackToSimple, long optimizationTimeMs) {
+            this.optimizedOrder = optimizedOrder;
+            this.fellbackToSimple = fellbackToSimple;
+            this.optimizationTimeMs = optimizationTimeMs;
+        }
+    }
+
+    /**
      * Optimizes the visit order using Google OR-Tools VRPTW algorithm
      */
     public List<Mother> optimizeVisitOrder(List<Mother> mothers, LocalTime startTime, LocalTime endTime) {

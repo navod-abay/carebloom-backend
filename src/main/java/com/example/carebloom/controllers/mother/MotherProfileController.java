@@ -4,6 +4,8 @@ import com.example.carebloom.dto.mother.PhotoUploadUrlRequest;
 import com.example.carebloom.dto.mother.PhotoUploadUrlResponse;
 import com.example.carebloom.dto.mother.PhotoConfirmRequest;
 import com.example.carebloom.dto.mother.MotherBasicProfileResponse;
+import com.example.carebloom.dto.mother.LocationUpdateRequest;
+import com.example.carebloom.dto.mother.MotherProfileResponse;
 import com.example.carebloom.models.Mother;
 import com.example.carebloom.repositories.MotherRepository;
 import com.example.carebloom.services.GoogleCloudStorageService;
@@ -210,6 +212,104 @@ public class MotherProfileController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Failed to retrieve profile information"));
         }
+    }
+
+    @Operation(summary = "Update location", 
+               description = "Update the mother's location coordinates")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Location updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid location data"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PutMapping("/auth/profile/location")
+    public ResponseEntity<?> updateLocation(@Valid @RequestBody LocationUpdateRequest request) {
+        try {
+            Mother currentMother = SecurityUtils.getCurrentMother();
+            if (currentMother == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(createErrorResponse("Authentication required"));
+            }
+
+            logger.info("Updating location for mother: {}", currentMother.getId());
+
+            // Validate location data
+            if (request.getLocation() == null) {
+                return ResponseEntity.badRequest()
+                    .body(createErrorResponse("Location data is required"));
+            }
+
+            LocationUpdateRequest.LocationCoordinates locationData = request.getLocation();
+            
+            // Validate coordinates
+            if (locationData.getLatitude() == null || locationData.getLongitude() == null) {
+                return ResponseEntity.badRequest()
+                    .body(createErrorResponse("Latitude and longitude are required"));
+            }
+
+            // Basic validation for coordinate ranges
+            if (locationData.getLatitude() < -90 || locationData.getLatitude() > 90) {
+                return ResponseEntity.badRequest()
+                    .body(createErrorResponse("Invalid latitude value. Must be between -90 and 90"));
+            }
+
+            if (locationData.getLongitude() < -180 || locationData.getLongitude() > 180) {
+                return ResponseEntity.badRequest()
+                    .body(createErrorResponse("Invalid longitude value. Must be between -180 and 180"));
+            }
+
+            // Update mother's location
+            currentMother.setLatitude(locationData.getLatitude());
+            currentMother.setLongitude(locationData.getLongitude());
+            currentMother.setUpdatedAt(LocalDateTime.now());
+
+            Mother updatedMother = motherRepository.save(currentMother);
+
+            // Convert to response DTO
+            MotherProfileResponse response = convertToProfileResponse(updatedMother, locationData);
+
+            logger.info("Successfully updated location for mother: {}", currentMother.getId());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error updating location: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(createErrorResponse("Failed to update location"));
+        }
+    }
+
+    /**
+     * Helper method to convert Mother entity to MotherProfileResponse
+     */
+    private MotherProfileResponse convertToProfileResponse(Mother mother, LocationUpdateRequest.LocationCoordinates locationData) {
+        MotherProfileResponse response = new MotherProfileResponse();
+        response.setId(mother.getId());
+        response.setEmail(mother.getEmail());
+        response.setName(mother.getName());
+        response.setPhone(mother.getPhone());
+        response.setDueDate(mother.getDueDate());
+        response.setAddress(mother.getAddress());
+        response.setDistrict(mother.getDistrict());
+        response.setMohOfficeId(mother.getMohOfficeId());
+        response.setAreaMidwifeId(mother.getAreaMidwifeId());
+        response.setRecordNumber(mother.getRecordNumber());
+        response.setUnitId(mother.getUnitId());
+        response.setProfilePhotoUrl(mother.getProfilePhotoUrl());
+        response.setCreatedAt(mother.getCreatedAt());
+        response.setUpdatedAt(mother.getUpdatedAt());
+        
+        // Set location coordinates from the request (including accuracy and timestamp)
+        if (locationData != null) {
+            MotherProfileResponse.LocationCoordinates location = new MotherProfileResponse.LocationCoordinates();
+            location.setLatitude(locationData.getLatitude());
+            location.setLongitude(locationData.getLongitude());
+            location.setAccuracy(locationData.getAccuracy());
+            location.setTimestamp(locationData.getTimestamp());
+            response.setLocation(location);
+        }
+        
+        return response;
     }
 
     /**

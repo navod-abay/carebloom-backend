@@ -125,7 +125,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
             logger.debug("Authenticating mother with UID: {}", firebaseUid);
             Mother mother = motherRepository.findByFirebaseUid(firebaseUid);
             logger.debug("Mother lookup result: {}", mother != null ? "found" : "not found");
-            
+
             if (mother != null) {
                 setAuthentication(firebaseUid, "MOTHER", mother.getId(), mother);
                 logger.info("Authenticated mother: {}", firebaseUid);
@@ -134,6 +134,7 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (Exception e) {
             logger.error("Exception during mother authentication for UID {}: {}", firebaseUid, e.getMessage(), e);
+
         }
     }
 
@@ -150,9 +151,6 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
-    /**
-     * Authenticate a vendor user
-     */
     private void authenticateVendor(String firebaseUid) {
         Vendor vendor = vendorRepository.findByFirebaseUid(firebaseUid);
         if (vendor != null) {
@@ -161,10 +159,13 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
         } else {
             logger.warn("User {} attempted to access vendor resources but was not found", firebaseUid);
         }
+
     }
 
     /**
-     * Authenticate a MOH Office user, determining their specific role based on the
+     * Authenticate a MOH Office
+     * user, determining their specific role based on the
+     * 
      * role field first, then accountType
      */
     private void authenticateMohUser(String firebaseUid) {
