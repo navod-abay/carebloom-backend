@@ -31,4 +31,10 @@ public class VendorCartController {
         logger.debug("Found {} vendor orders for vendorId={}", orders == null ? 0 : orders.size(), vendorId);
         return orders;
     }
+    
+    @GetMapping("/stats")
+    public com.example.carebloom.dto.vendor.VendorOrderStatsDto getOrderStats(@PathVariable String vendorId) {
+        logger.debug("Fetching vendor order stats for vendorId={}", vendorId);
+        return vendorCartService.getOrderStats(vendorId);
+    }
 }

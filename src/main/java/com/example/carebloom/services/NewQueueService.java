@@ -52,7 +52,8 @@ public class NewQueueService {
         queueUserRepository.deleteByClinicId(clinicId);
         logger.info("Cleared all existing queue data for clinic: {} (including old completed/no-show patients)", clinicId);
         
-        // Set clinic status to open
+        // Reset completed count for the day
+        clinic.setCompletedToday(0);
         clinic.setQueueStatus("open");
         clinicRepository.save(clinic);
         
@@ -66,6 +67,7 @@ public class NewQueueService {
         response.put("currentPatient", null);
         response.put("waitingQueue", List.of());
         response.put("totalPatients", 0);
+        response.put("completedToday", 0);
         
         return response;
     }
@@ -96,12 +98,17 @@ public class NewQueueService {
             .filter(user -> "waiting".equals(user.getStatus()))
             .toList();
         
+        Integer completedCount = clinic.getCompletedToday() != null ? clinic.getCompletedToday() : 0;
+        logger.info("Queue status for clinic {}: {} patients in queue, {} completed today", 
+                   clinicId, queueUsers.size(), completedCount);
+        
         Map<String, Object> response = new HashMap<>();
         response.put("clinicId", clinicId);
         response.put("isActive", isActive);
         response.put("currentPatient", currentPatient);
         response.put("waitingQueue", waitingPatients);
         response.put("totalPatients", queueUsers.size());
+        response.put("completedToday", completedCount);
         
         return response;
     }
@@ -233,6 +240,13 @@ public class NewQueueService {
     public Map<String, Object> processNextPatient(String clinicId) {
         logger.info("Processing next patient for clinic: {}", clinicId);
         
+        // Get the clinic to increment completed count
+        Optional<Clinic> clinicOpt = clinicRepository.findById(clinicId);
+        if (clinicOpt.isEmpty()) {
+            throw new IllegalArgumentException("Clinic not found");
+        }
+        Clinic clinic = clinicOpt.get();
+        
         // Get current patient
         Optional<QueueUser> currentPatientOpt = queueUserRepository.findByClinicIdAndStatus(clinicId, "in-progress");
         if (currentPatientOpt.isPresent()) {
@@ -240,6 +254,12 @@ public class NewQueueService {
             // Instead of marking as completed, directly remove the patient to prevent "already in queue" issues
             queueUserRepository.delete(currentPatient);
             logger.info("Completed and removed patient {} from queue", currentPatient.getName());
+            
+            // Increment completed count
+            Integer currentCount = clinic.getCompletedToday() != null ? clinic.getCompletedToday() : 0;
+            clinic.setCompletedToday(currentCount + 1);
+            clinicRepository.save(clinic);
+            logger.info("Incremented completed count to {} for clinic {}", currentCount + 1, clinicId);
         }
         
         // Get next waiting patient

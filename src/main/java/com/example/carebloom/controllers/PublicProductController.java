@@ -154,4 +154,28 @@ public class PublicProductController {
                             "error", "Failed to fetch categories: " + e.getMessage()));
         }
     }
+
+    /**
+     * Get featured/best-selling products for mobile app home screen
+     */
+    @GetMapping("/featured")
+    public ResponseEntity<?> getFeaturedProducts(@RequestParam(defaultValue = "6") int limit) {
+        try {
+            logger.info("Fetching {} featured products for mobile app", limit);
+
+            List<ProductResponse> products = publicProductService.getFeaturedProducts(limit);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", products,
+                    "count", products.size(),
+                    "message", "Featured products retrieved successfully"));
+        } catch (Exception e) {
+            logger.error("Error fetching featured products", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "error", "Failed to fetch featured products: " + e.getMessage()));
+        }
+    }
 }
