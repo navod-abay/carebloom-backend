@@ -271,4 +271,36 @@ public class PublicProductService {
         response.setUpdatedAt(product.getUpdatedAt());
         return response;
     }
+
+    /**
+     * Get featured/best-selling products (random selection from active products)
+     * @param limit Number of featured products to return (default: 6)
+     */
+    public List<ProductResponse> getFeaturedProducts(int limit) {
+        logger.info("Fetching {} featured products", limit);
+        
+        List<String> approvedVendorIds = getApprovedVendorIds();
+        
+        if (approvedVendorIds.isEmpty()) {
+            logger.warn("No approved vendors found");
+            return List.of();
+        }
+        
+        // Get all active products from approved vendors
+        List<Product> allActiveProducts = productRepository.findActiveProductsByVendorIds(approvedVendorIds);
+        
+        // Shuffle and limit to get random featured products
+        java.util.Collections.shuffle(allActiveProducts);
+        
+        List<Product> featuredProducts = allActiveProducts.stream()
+            .limit(limit)
+            .collect(Collectors.toList());
+        
+        logger.info("Found {} featured products", featuredProducts.size());
+        
+        return featuredProducts.stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+    }
 }
+
