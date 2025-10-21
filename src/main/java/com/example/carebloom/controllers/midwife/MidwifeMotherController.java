@@ -109,10 +109,7 @@ public class MidwifeMotherController {
             @PathVariable String motherId,
             @RequestBody HealthDetails healthDetailsRequest) {
 
-        // Verify mother exists
-        Mother mother = motherRepository.findById(motherId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mother not found"));
-
+        
         // Check if health details already exist
         Optional<HealthDetails> existingHealthDetails = healthDetailsRepository.findByMotherId(motherId);
 
